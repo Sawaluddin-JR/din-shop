@@ -4,11 +4,8 @@
 
 import { Outlet } from "react-router-dom";
 import Header from "./components/Header";
-import SideBar from "./components/SideBar";
 import Footer from "./components/Footer";
 import ProductProvider from "./contexts/ProductContext";
-import { useState } from "react";
-import ProductDetail from "./pages/ProductDetails";
 
 export default function App() {
   // const [user, setUser] = useState({});
@@ -36,15 +33,13 @@ export default function App() {
   //   </>
   // );
 
-  const [product, setProduct] = useState(ProductDetail);
-
   return (
     <div className="overflow-hidden">
       <ProductProvider>
         <Header />
         {/* <Home /> */}
         <Outlet />
-        <SideBar />
+        {/* <SideBar /> */}
         <Footer />
       </ProductProvider>
     </div>

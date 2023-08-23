@@ -1,4 +1,3 @@
-import React from "react";
 import { AiOutlineInstagram } from "react-icons/ai";
 import { RiFacebookFill } from "react-icons/ri";
 import { AiOutlineTwitter } from "react-icons/ai";
@@ -9,7 +8,7 @@ const Footer = () => {
     <div className="bg-blue-100">
       <div className="mx-auto py-8 px-10 flex justify-between">
         <div className="w-1/3">
-          <div className="flex items-center justify-center -ml-36">
+          <div className="flex items-center justify-center mr-48">
             <img src="logo.jpg" alt="logo" className="w-14 h-14 rounded-full" />
             <h1 className="text-2xl font-bold text-gray-800">
               DIN-<span className="text-blue-900">SHOP</span>

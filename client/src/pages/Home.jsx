@@ -138,7 +138,7 @@
 //}
 
 // eslint-disable-next-line no-unused-vars
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { BsArrowRight } from "react-icons/bs";
 import { AiOutlineShoppingCart, AiOutlineCloseCircle } from "react-icons/ai";
@@ -173,58 +173,80 @@ const category = [
   },
 ];
 
-const Home = ({ detail, view, setClose, addtocart }) => {
+const Home = () => {
+  // add to cart
+  const [cart, setCart] = useState([]);
+  //product Detail
+  const [close, setClose] = useState(false);
+  const [detail, setDetail] = useState([]);
+
+  //product detail
+  const view = (product) => {
+    setDetail([{ ...product }]);
+    setClose(true);
+  };
+  // add to cart
+  const addtocart = (product) => {
+    const exsit = cart.find((x) => {
+      return x.id === product.id;
+    });
+    if (exsit) {
+      alert("This Product is already added to cart");
+    } else {
+      setCart([...cart, { ...product, qty: 1 }]);
+      alert("product is added to cart");
+    }
+  };
+  console.log(cart);
+
   return (
     <>
-      {setClose ? (
+      {close ? (
         <div className="fixed inset-0 z-20 bg-black bg-opacity-25">
-          <div className="container mx-auto p-8">
+          <div className="mx-auto p-8">
             <button
               onClick={() => setClose(false)}
               className="absolute top-0 right-0 mt-4 mr-4 text-2xl"
             >
               <AiOutlineCloseCircle />
             </button>
-            {
-              // eslint-disable-next-line react/prop-types
-              detail.map((curElm) => {
-                return (
-                  <div
-                    className="flex p-4 border border-gray-300 rounded-md mb-4"
-                    key={curElm}
-                  >
-                    <div className="w-1/2 p-4">
-                      <img
-                        src={curElm.Img}
-                        alt={curElm.Title}
-                        className="w-full h-8 object-cover"
-                      />
-                    </div>
-                    <div className="w-1/2 ml-4">
-                      <h4 className="text-gray-600 uppercase text-sm">
-                        {curElm.Cat}
-                      </h4>
-                      <h2 className="text-2xl text-blue-800 capitalize font-semibold mt-2">
-                        {curElm.Title}
-                      </h2>
-                      <p className="text-gray-700 mt-2">
-                        A Screen Everyone Will Love: Whether your family is
-                        streaming or video chatting with friends tablet A8...{" "}
-                      </p>
-                      <h3 className="text-3xl text-blue-800 mt-2">
-                        {curElm.Price}
-                      </h3>
-                      <button
-                        className="mt-4 px-6 py-2 text-white bg-blue-800 rounded-md transition duration-300 hover:bg-blue-700 focus:outline-none"
-                        onClick={() => addtocart(curElm)}
-                      >
-                        Add To Cart
-                      </button>
-                    </div>
+            {detail.map((curElm) => {
+              return (
+                <div
+                  className="flex p-4 border border-gray-300 rounded-md mb-4"
+                  key={curElm}
+                >
+                  <div className="w-1/2 p-4">
+                    <img
+                      src={curElm.Img}
+                      alt={curElm.Title}
+                      className="w-full h-8 object-cover"
+                    />
                   </div>
-                );
-              })
-            }
+                  <div className="w-1/2 ml-4">
+                    <h4 className="text-gray-600 uppercase text-sm">
+                      {curElm.Cat}
+                    </h4>
+                    <h2 className="text-2xl text-blue-800 capitalize font-semibold mt-2">
+                      {curElm.Title}
+                    </h2>
+                    <p className="text-gray-700 mt-2">
+                      A Screen Everyone Will Love: Whether your family is
+                      streaming or video chatting with friends tablet A8...{" "}
+                    </p>
+                    <h3 className="text-3xl text-blue-800 mt-2">
+                      {curElm.Price}
+                    </h3>
+                    <button
+                      className="mt-4 px-6 py-2 text-white bg-blue-800 rounded-md transition duration-300 hover:bg-blue-700 focus:outline-none"
+                      onClick={() => addtocart(curElm)}
+                    >
+                      Add To Cart
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             {/* <div className="productbox"></div> */}
           </div>
         </div>
@@ -232,7 +254,7 @@ const Home = ({ detail, view, setClose, addtocart }) => {
       <div className="bg-blue-100 py-8">
         <div className="mx-auto flex justify-between items-center">
           <div className="ml-8 mt-8">
-            <h2 className="text-4xl font-semibold text-blue-800 mr-64 mb-10">
+            <h2 className="text-6xl font-semibold text-blue-800 mr-64 mb-10">
               The Best Note Book Colletion 2023
             </h2>
             <Link
@@ -243,12 +265,8 @@ const Home = ({ detail, view, setClose, addtocart }) => {
               <BsArrowRight className="w-5 h-5" />
             </Link>
           </div>
-          <div className="img_box">
-            <img
-              src="slider-img.png"
-              alt="sliderimg"
-              className="max-w-full mr-8"
-            />
+          <div className="mr-8 max-w-full">
+            <img src="slider-img.png" alt="sliderimg" />
           </div>
         </div>
       </div>
@@ -324,7 +342,7 @@ const Home = ({ detail, view, setClose, addtocart }) => {
       </div>
       <div className="py-8 px-6">
         <h2 className="text-2xl text-blue-800 mb-6">Top Products</h2>
-        <div className="container mx-auto grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mx-auto grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Homeproduct.map((curElm) => {
             return (
               <div
@@ -340,17 +358,17 @@ const Home = ({ detail, view, setClose, addtocart }) => {
                   <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col items-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
                     <li
                       onClick={() => addtocart(curElm)}
-                      className="list-none p-2 bg-white shadow-md rounded-full text-blue-800 cursor-pointer group-hover:bg-blue-800 group-hover:text-white"
+                      className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                     >
                       <AiOutlineShoppingCart className="text-xl" />
                     </li>
                     <li
                       onClick={() => view(curElm)}
-                      className="list-none p-2 bg-white shadow-md rounded-full text-blue-800 cursor-pointer group-hover:bg-blue-800 group-hover:text-white"
+                      className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                     >
                       <BsEye className="text-xl" />
                     </li>
-                    <li className="list-none p-2 bg-white shadow-md rounded-full text-blue-800 cursor-pointer group-hover:bg-blue-800 group-hover:text-white">
+                    <li className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white">
                       <AiOutlineHeart className="text-xl" />
                     </li>
                   </div>
@@ -368,7 +386,7 @@ const Home = ({ detail, view, setClose, addtocart }) => {
         </div>
       </div>
       <div className="py-5">
-        <div className="container mx-auto p-8 bg-blue-800 rounded-lg flex justify-between">
+        <div className="container mx-auto p-10 bg-blue-800 rounded-lg flex justify-between">
           <div className="detail">
             <h4 className="text-blue-200 text-sm font-medium tracking-wide">
               LATEST TECHNOLOGY ADDED
