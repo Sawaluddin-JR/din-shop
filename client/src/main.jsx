@@ -6,7 +6,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import EditProduct from "./pages/EditProduct.jsx";
-import { Auth0Provider } from "@auth0/auth0-react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import Product from "./pages/Product.jsx";
 import Cart from "./pages/Cart.jsx";
 import About from "./pages/About.jsx";
@@ -51,17 +51,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RouterProvider router={router}>
-      <Auth0Provider
-        domain="dev-e7yx7tllcdvub010.us.auth0.com"
-        clientId="ecxFFIDMkB235jKDKajQPxXBB5Zh24lV"
-        authorizationParams={{
-          redirect_uri: window.location.origin,
-        }}
-      >
+    <GoogleOAuthProvider clientId="677950615289-3bhdufvkpmm38hthi0oc9ag0tjq19o5u.apps.googleusercontent.com">
+      <RouterProvider router={router}>
         <App />
-      </Auth0Provider>
-      ,
-    </RouterProvider>
+      </RouterProvider>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );

@@ -2,6 +2,7 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { Navigate, useNavigate, useOutletContext } from "react-router-dom";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
   const [login, setLogin] = useState({
@@ -11,6 +12,21 @@ export default function Login() {
   const navigate = useNavigate();
 
   const [user, setUser] = useOutletContext();
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const response = await fetch(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        }
+      );
+      const userInfo = await response.json();
+      console.log(userInfo);
+    },
+  });
 
   if (user) {
     return <Navigate to="/" />;
@@ -64,6 +80,7 @@ export default function Login() {
               Login
             </Button>
           </div>
+          <button onClick={() => googleLogin()}>Google</button>
         </form>
       </main>
     );

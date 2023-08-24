@@ -40,21 +40,25 @@
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { BsEye } from "react-icons/bs";
 import { AiOutlineHeart, AiOutlineCloseCircle } from "react-icons/ai";
-import { useAuth0 } from "@auth0/auth0-react";
+// import { useAuth0 } from "@auth0/auth0-react";
 import ProductDetail from "../components/ProductDetails";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { CartCont } from "../App";
 
 const Product = () => {
-  const { loginWithRedirect, isAuthenticated } = useAuth0();
+  // {product, setProduct, detail, view, close, setClose, addToCart}
+  // const { loginWithRedirect, isAuthenticated } = useAuth0();
+  // const { cart, setCart } = useContext(CartCont);
   // add to cart
-  const [cart, setCart] = useState([]);
+  // const [cart, setCart] = useState([]);
+  const { cart, setCart } = useContext(CartCont);
   //product Detail
   const [close, setClose] = useState(false);
   const [detail, setDetail] = useState([]);
   //filter product
   const [product, setProduct] = useState(ProductDetail);
 
-  const filtterproduct = (product) => {
+  const filterproduct = (product) => {
     const update = ProductDetail.filter((x) => {
       return x.Cat === product;
     });
@@ -71,66 +75,76 @@ const Product = () => {
   };
 
   // add to cart
-  const addtocart = (product) => {
-    const exsit = cart.find((x) => {
+  const addToCart = (product) => {
+    const item = cart.find((x) => {
       return x.id === product.id;
     });
-    if (exsit) {
+    if (item) {
       alert("This Product is already added to cart");
     } else {
       setCart([...cart, { ...product, qty: 1 }]);
       alert("product is added to cart");
     }
   };
-  console.log(cart);
+  //   if (cart.find((p) => p.id == product.id)) {
+  //     setCart(
+  //       cart.map((p) => (p.id == product.id ? { ...p, count: p.count + 1 } : p))
+  //     );
+  //   } else {
+  //     setCart([...cart, { ...product, count: 1 }]);
+  //   }
+  // };
+  // console.log(cart);
 
   return (
     <div>
       {close ? (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-25">
-          <div className="sm:p-6 max-w-screen-lg md:p-8 bg-white rounded-lg shadow-md">
+          <div className="sm:p-6 max-w-screen-md md:p-8 bg-white rounded-lg shadow-md">
             <button
               onClick={() => setClose(false)}
-              className="absolute top-2 right-2 text-2xl text-gray-600 hover:text-gray-800 focus:outline-none"
+              className="absolute text-2xl text-gray-600 hover:text-gray-800 focus:outline-none"
             >
               <AiOutlineCloseCircle />
             </button>
-            <div className="grid gap-2 md:grid-cols-2">
-              {detail.map((curElm) => {
-                return (
-                  <div
-                    key={curElm}
-                    className="flex p-4 items-center border border-gray-200 rounded-md"
-                  >
-                    <div className="mr-2 w-1/2 p-4">
-                      <img
-                        src={curElm.Img}
-                        alt={curElm.Title}
-                        className="md:w-32 md:h-auto w-full object-cover"
-                      />
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="text-sm font-light text-gray-500 tracking-wide uppercase">
-                        {curElm.Cat}
-                      </h4>
-                      <h2 className="mt-2 text-xl text-blue-900 capitalize">
-                        {curElm.Title}
-                      </h2>
-                      <p className="mt-2 text-gray-700">
-                        A Screen Everyone Will Love: Whether your family is
-                        streaming or video chatting with friends tablet A8...
-                      </p>
-                      <h3 className="mt-2 text-blue-900 text-xl">
-                        {curElm.Price}
-                      </h3>
-                      <button className="mt-4 py-2 px-4 text-lg text-white bg-blue-900 transition duration-500 hover:bg-blue-500 rounded-md">
-                        Add To Cart
-                      </button>
-                    </div>
+            {detail.map((item) => {
+              return (
+                <div
+                  className="flex p-4 items-center border border-gray-200 rounded-md"
+                  key={item}
+                >
+                  <div className="mr-2 w-1/4">
+                    <img
+                      src={item.Img}
+                      alt={item.Title}
+                      className="md:w-32 md:h-auto object-cover"
+                    />
                   </div>
-                );
-              })}
-            </div>
+                  <div className="ml-4">
+                    <h4 className="text-sm font-light text-gray-500 tracking-wide uppercase">
+                      {item.Cat}
+                    </h4>
+                    <h2 className="mt-2 text-xl text-blue-900 capitalize">
+                      {item.Title}
+                    </h2>
+                    <p className="text-gray-700 mt-2">
+                      A Screen Everyone Will Love: Whether your family is
+                      streaming or video chatting with friends tablet A8...{" "}
+                    </p>
+                    <h3 className="text-3xl text-blue-900 mt-2">
+                      {item.Price}
+                    </h3>
+                    <button
+                      className="mt-4 px-4 py-2 text-white bg-blue-800 text-lg rounded-md transition duration-500 hover:bg-blue-500"
+                      onClick={() => addToCart(item)}
+                    >
+                      Add To Cart
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {/* <div className="productbox"></div> */}
           </div>
         </div>
       ) : null}
@@ -151,31 +165,31 @@ const Product = () => {
                   All Products
                 </li>
                 <li
-                  onClick={() => filtterproduct("Tablet")}
+                  onClick={() => filterproduct("Tablet")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
                   Tablet
                 </li>
                 <li
-                  onClick={() => filtterproduct("Smart Watch")}
+                  onClick={() => filterproduct("Smart Watch")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
                   Smart Watch
                 </li>
                 <li
-                  onClick={() => filtterproduct("Headphone")}
+                  onClick={() => filterproduct("Headphone")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
                   Headphone
                 </li>
                 <li
-                  onClick={() => filtterproduct("Camera")}
+                  onClick={() => filterproduct("Camera")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
                   Camera
                 </li>
                 <li
-                  onClick={() => filtterproduct("Gaming")}
+                  onClick={() => filterproduct("Gaming")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
                   Gaming
@@ -185,37 +199,37 @@ const Product = () => {
           </div>
           <div className="w-full md:w-3/4 mt-6 md:mt-0 py-8 px-6">
             <div className="mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-              {product.map((curElm) => {
+              {product.map((item) => {
                 return (
                   <>
                     <div
                       className="p-4 border border-gray-300 mb-5 transition duration-500 ease-in-out cursor-pointer rounded-md mr-5 hover:shadow-md"
-                      key={curElm.id}
+                      key={item.id}
                     >
                       <div className="relative border-b border-gray-300 pb-2">
                         <img
-                          src={curElm.Img}
-                          alt={curElm.Title}
+                          src={item.Img}
+                          alt={item.Title}
                           className="w-full h-40 object-cover hover:scale-110 transition duration-300"
                         />
                         <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col items-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
-                          {isAuthenticated ? (
-                            <li
-                              onClick={() => addtocart(curElm)}
-                              className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
-                            >
-                              <AiOutlineShoppingCart />
-                            </li>
-                          ) : (
+                          {/* {isAuthenticated ? ( */}
+                          <li
+                            onClick={() => addToCart(item)}
+                            className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
+                          >
+                            <AiOutlineShoppingCart />
+                          </li>
+                          {/* ) : (
                             <li
                               onClick={() => loginWithRedirect()}
                               className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                             >
                               <AiOutlineShoppingCart />
                             </li>
-                          )}
+                          )} */}
                           <li
-                            onClick={() => view(curElm)}
+                            onClick={() => view(item)}
                             className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                           >
                             <BsEye />
@@ -226,12 +240,12 @@ const Product = () => {
                         </div>
                       </div>
                       <div className="mt-2">
-                        <p className="text-gray-500">{curElm.Cat}</p>
+                        <p className="text-gray-500">{item.Cat}</p>
                         <h3 className="text-base mt-1 text-blue-900 transition duration-500 hover:text-blue-500">
-                          {curElm.Title}
+                          {item.Title}
                         </h3>
                         <h4 className="mt-2 text-sm text-blue-500 font-semibold">
-                          ${curElm.Price}
+                          ${item.Price}
                         </h4>
                       </div>
                     </div>

@@ -2,6 +2,7 @@ import { AiOutlineInstagram } from "react-icons/ai";
 import { RiFacebookFill } from "react-icons/ri";
 import { AiOutlineTwitter } from "react-icons/ai";
 import { BsYoutube } from "react-icons/bs";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -9,8 +10,12 @@ const Footer = () => {
       <div className="mx-auto py-8 px-10 flex justify-between">
         <div className="w-1/3">
           <div className="flex items-center justify-center mr-48">
-            <img src="logo.jpg" alt="logo" className="w-14 h-14 rounded-full" />
-            <h1 className="text-2xl font-bold text-gray-800">
+            <img
+              src="logoku.png"
+              alt="logo"
+              className="w-10 h-10 rounded-full"
+            />
+            <h1 className="text-2xl font-bold text-gray-800 ml-1">
               DIN-<span className="text-blue-900">SHOP</span>
             </h1>
           </div>
@@ -38,19 +43,19 @@ const Footer = () => {
         <div className="account">
           <h3 className="text-2xl text-gray-800">My Account</h3>
           <ul className="mt-2">
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition">
               Account
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition mt-1">
               Order
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition mt-1">
               Cart
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition mt-1">
               Shipping
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition mt-1">
               Return
             </li>
           </ul>
@@ -58,16 +63,16 @@ const Footer = () => {
         <div className="page">
           <h3 className="text-2xl text-gray-800">Pages</h3>
           <ul className="mt-2">
-            <li className="text-gray-600 hover:text-blue-500 transition">
-              Home
+            <li className="text-gray-900 hover:underline transition mt-1">
+              <Link to={"/"}>Home</Link>
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
-              About
+            <li className="text-gray-900 hover:underline transition mt-1">
+              <Link to={"/about"}>About</Link>
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
-              Contact
+            <li className="text-gray-900 hover:underline transition mt-1">
+              <Link to={"/contact"}>Contact</Link>
             </li>
-            <li className="text-gray-600 hover:text-blue-500 transition">
+            <li className="text-gray-900 hover:underline transition mt-1">
               Terms & Conditions
             </li>
           </ul>

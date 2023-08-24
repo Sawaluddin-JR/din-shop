@@ -5,18 +5,25 @@
 import { Outlet } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import ProductProvider from "./contexts/ProductContext";
+import { createContext, useEffect, useState } from "react";
+import { api } from "./utils";
+
+export const CartCont = createContext({
+  cart: null,
+  setCart: () => {},
+});
 
 export default function App() {
-  // const [user, setUser] = useState({});
+  const [cart, setCart] = useState([]);
+  const [user, setUser] = useState({});
 
-  // useEffect(() => {
-  //   api("/me").then((user) => {
-  //     if (!user) {
-  //       setUser(null);
-  //     }
-  //   });
-  // }, []);
+  useEffect(() => {
+    api("/me").then((user) => {
+      if (!user) {
+        setUser(null);
+      }
+    });
+  }, []);
   // console.log(user);
   // return (
   //   <>
@@ -35,13 +42,11 @@ export default function App() {
 
   return (
     <div className="overflow-hidden">
-      <ProductProvider>
+      <CartCont.Provider value={{ cart, setCart }}>
         <Header />
-        {/* <Home /> */}
-        <Outlet />
-        {/* <SideBar /> */}
-        <Footer />
-      </ProductProvider>
+        <Outlet context={[user, setUser]} />
+      </CartCont.Provider>
+      <Footer />
     </div>
   );
 }

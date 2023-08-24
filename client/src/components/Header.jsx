@@ -7,21 +7,21 @@ import { CiLogin } from "react-icons/ci";
 import { CiLogout } from "react-icons/ci";
 import { Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import ProductDetail from "./ProductDetails";
 
 // eslint-disable-next-line react/prop-types
-const Header = () => {
+const Header = ({ searchbtn }) => {
+  // {searchbtn}
   const [search, setSearch] = useState();
   const { loginWithRedirect, logout, user, isAuthenticated } = useAuth0();
   const [isHeaderFixed, setIsHeaderFixed] = useState(false);
-  const [product, setProduct] = useState(ProductDetail);
+  // const [product, setProduct] = useState(ProductDetail);
 
-  const searchbtn = (product) => {
-    const change = ProductDetail.filter((x) => {
-      return x.Cat === product;
-    });
-    setProduct(change);
-  };
+  // const searchbtn = (product) => {
+  //   const change = ProductDetail.filter((x) => {
+  //     return x.Cat === product;
+  //   });
+  //   setProduct(change);
+  // };
 
   useEffect(() => {
     // Add event listener to listen for scroll
@@ -60,11 +60,11 @@ const Header = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <img
-                src="logo.jpg"
+                src="logoku.png"
                 alt="logo"
-                className="w-14 h-14 rounded-full"
+                className="w-12 h-12 rounded-full"
               />
-              <h1 className="text-2xl font-bold text-gray-800 ml-2">
+              <h1 className="text-2xl font-bold text-gray-800 ml-1">
                 DIN-<span className="text-blue-900">SHOP</span>
               </h1>
             </div>
@@ -79,7 +79,7 @@ const Header = () => {
               />
               <button
                 onClick={() => searchbtn(search)}
-                className="py-2 px-4 bg-blue-500 text-white"
+                className="py-2 px-4 bg-blue-500 text-white  hover:bg-blue-800"
               >
                 Search
               </button>
@@ -94,10 +94,16 @@ const Header = () => {
                 </div>
               )}
               <div className="flex">
-                <Link to="/" className="text-blue-500 mr-6 text-2xl">
+                <Link
+                  to="/"
+                  className="text-blue-500 mr-6 text-2xl  hover:text-red-500"
+                >
                   <AiOutlineHeart />
                 </Link>
-                <Link to="/cart" className="text-blue-500 mr-4 text-xl">
+                <Link
+                  to="/cart"
+                  className="text-blue-500 mr-4 text-xl  hover:text-red-500"
+                >
                   <BsBagCheck />
                 </Link>
               </div>
@@ -150,14 +156,14 @@ const Header = () => {
                       logoutParams: { returnTo: window.location.origin },
                     })
                   }
-                  className="text-blue-900 text-2xl"
+                  className="text-blue-900 text-2xl  hover:text-red-500"
                 >
                   <CiLogout />
                 </button>
               ) : (
                 <button
                   onClick={() => loginWithRedirect()}
-                  className="text-blue-900 text-3xl"
+                  className="text-blue-900 text-3xl  hover:text-red-500"
                 >
                   <CiLogin />
                 </button>
