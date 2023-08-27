@@ -2,26 +2,30 @@ import { useEffect, useState } from "react";
 import { FaTruckMoving } from "react-icons/fa";
 import { AiOutlineHeart } from "react-icons/ai";
 import { BsBagCheck } from "react-icons/bs";
-import { AiOutlineUser } from "react-icons/ai";
+// import { AiOutlineUser } from "react-icons/ai";
 import { CiLogin } from "react-icons/ci";
-import { CiLogout } from "react-icons/ci";
+// import { CiLogout } from "react-icons/ci";
 import { Link } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+// import { api } from "../utils";
+// import { useAuth0 } from "@auth0/auth0-react";
 
 // eslint-disable-next-line react/prop-types
 const Header = ({ searchbtn }) => {
   // {searchbtn}
   const [search, setSearch] = useState();
-  const { loginWithRedirect, logout, user, isAuthenticated } = useAuth0();
+  // const { loginWithRedirect, logout, user, isAuthenticated } = useAuth0();
   const [isHeaderFixed, setIsHeaderFixed] = useState(false);
-  // const [product, setProduct] = useState(ProductDetail);
+  // const [product, setProduct] = useState([]);
 
   // const searchbtn = (product) => {
-  //   const change = ProductDetail.filter((x) => {
-  //     return x.Cat === product;
+  //   const change = product.filter((x) => {
+  //     return x.categories === product;
   //   });
   //   setProduct(change);
   // };
+  // useEffect(() => {
+  //   api("/products").then((product) => setProduct(product));
+  // });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -76,20 +80,20 @@ const Header = ({ searchbtn }) => {
               />
               <button
                 onClick={() => searchbtn(search)}
-                className="py-2 px-4 bg-blue-500 text-white  hover:bg-blue-800"
+                className="py-2 w-full px-4 bg-blue-500 text-white  hover:bg-blue-800"
               >
                 Search
               </button>
             </div>
             <div className="flex items-center">
-              {isAuthenticated && (
+              {/* {isAuthenticated && (
                 <div className="flex items-center mr-6">
                   <div className="text-2xl text-blue-900">
                     <AiOutlineUser />
                   </div>
                   <p className="text-sm font-semibold">Hello, {user.name}</p>
                 </div>
-              )}
+              )} */}
               <div className="flex">
                 <Link
                   to="/"
@@ -146,7 +150,7 @@ const Header = ({ searchbtn }) => {
               </ul>
             </div>
             <div className="text-2xl">
-              {isAuthenticated ? (
+              {/* {isAuthenticated ? (
                 <button
                   onClick={() =>
                     logout({
@@ -164,7 +168,12 @@ const Header = ({ searchbtn }) => {
                 >
                   <CiLogin />
                 </button>
-              )}
+              )} */}
+              <Link to={"/login"}>
+                <button className="text-blue-900 text-3xl  hover:text-red-500">
+                  <CiLogin />
+                </button>
+              </Link>
             </div>
           </div>
         </div>

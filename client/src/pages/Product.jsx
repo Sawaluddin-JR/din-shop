@@ -40,8 +40,6 @@
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { BsEye } from "react-icons/bs";
 import { AiOutlineHeart, AiOutlineCloseCircle } from "react-icons/ai";
-// import { useAuth0 } from "@auth0/auth0-react";
-import ProductDetail from "../components/ProductDetails";
 import { useContext, useEffect, useState } from "react";
 import { CartCont } from "../App";
 import { api } from "../utils";
@@ -58,19 +56,24 @@ const Product = () => {
   const [detail, setDetail] = useState([]);
   //filter product
   const [products, setProducts] = useState([]);
+  // const [category, setCategory] = useState([]);
 
   useEffect(() => {
     api("/products").then((products) => setProducts(products));
   });
 
+  // useEffect(() => {
+  //   api("/categories").then((products) => setProducts(products));
+  // });
+
   const filterproduct = (product) => {
-    const update = ProductDetail.filter((x) => {
-      return x.Cat === product;
+    const update = products.filter((x) => {
+      return x.categories === product;
     });
     setProducts(update);
   };
   const AllProducts = () => {
-    setProducts(ProductDetail);
+    setProducts(products);
   };
 
   //product detail
@@ -170,22 +173,22 @@ const Product = () => {
                   All Products
                 </li>
                 <li
-                  onClick={() => filterproduct("Tablet")}
+                  onClick={() => filterproduct("Men is clothing")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
-                  Tablet
+                  Men is clothing
                 </li>
                 <li
-                  onClick={() => filterproduct("Smart Watch")}
+                  onClick={() => filterproduct("Woman is clothing")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
-                  Smart Watch
+                  Woman is clothing
                 </li>
                 <li
-                  onClick={() => filterproduct("Headphone")}
+                  onClick={() => filterproduct("Electronics")}
                   className="cursor-pointer text-blue-900 hover:underline mt-5"
                 >
-                  Headphone
+                  Electronics
                 </li>
                 <li
                   onClick={() => filterproduct("Camera")}
@@ -245,7 +248,7 @@ const Product = () => {
                         </div>
                       </div>
                       <div className="mt-2">
-                        <p className="text-gray-500">{item.Cat}</p>
+                        <p className="text-gray-500">{item.categories}</p>
                         <h3 className="text-base mt-1 text-blue-900 transition duration-500 hover:text-blue-500">
                           {item.title}
                         </h3>

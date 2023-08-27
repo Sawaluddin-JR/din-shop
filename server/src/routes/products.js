@@ -23,15 +23,24 @@ const productRouter = express.Router();
 
 // tampilkan semua
 productRouter.get("/", async (_req, res) => {
-  const angels = await conn.query("SELECT * FROM products");
-  res.json(angels);
+  const products = await conn.query("SELECT * FROM products");
+  res.json(products);
+});
+
+// tampilkan berdasarkan categories
+productRouter.get("/categories", async (req, res) => {
+  const prepare = await conn.prepare(
+    "SELECT * FROM products WHERE categories = ?"
+  );
+  const product = await prepare.execute([req.body.categories]);
+  res.json(product);
 });
 
 // tampilkan berdasarkan ID
 productRouter.get("/:id", async (req, res) => {
   const prepare = await conn.prepare("SELECT * FROM products WHERE id = ?");
-  const angel = await prepare.execute([req.params.id][0]);
-  res.json(angel);
+  const product = await prepare.execute([req.params.id][0]);
+  res.json(product);
 });
 
 // buat

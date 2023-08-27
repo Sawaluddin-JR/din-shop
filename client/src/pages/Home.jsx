@@ -40,7 +40,7 @@ const category = [
 ];
 
 const Home = () => {
-  const [products, setProducts] = useState([]);
+  const [setProducts] = useState([]);
   const { cart, setCart } = useContext(CartCont);
   const [close, setClose] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
@@ -52,7 +52,7 @@ const Home = () => {
   console.log(user);
   useEffect(() => {
     api("/products").then((products) => setProducts(products));
-  }, [user, navigate]);
+  });
 
   const view = (product) => {
     setDetail([{ ...product }]);
@@ -328,11 +328,11 @@ const Home = () => {
                 <span className="text-gray-700">Categories :</span>
                 <input
                   type="text"
-                  value={newProducts.categories_id ?? ""}
+                  value={newProducts.categories ?? ""}
                   onChange={(e) =>
                     setnewProducts({
                       ...newProducts,
-                      categories_id: e.target.value,
+                      categories: e.target.value,
                     })
                   }
                   required
@@ -404,7 +404,9 @@ const Home = () => {
               <h3 className="text-white text-2xl font-semibold mt-2">
                 Apple iPad 10.2 9th Gen - 2021
               </h3>
-              <p className="text-blue-100 text-xl font-semibold mt-4">$ 986</p>
+              <p className="text-blue-100 text-xl font-semibold mt-4">
+                Rp 9.860.000
+              </p>
               <Link
                 to="/product"
                 className="px-5 py-2 mt-4 text-blue-800 bg-gray-400 rounded-md transition duration-500 hover:bg-white hover:text-black flex items-center w-36"

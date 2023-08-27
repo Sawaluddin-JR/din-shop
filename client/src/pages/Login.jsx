@@ -99,14 +99,14 @@ export default function Login() {
           <div className="flex flex-col sm:flex-row justify-between items-center">
             <Button
               variant="contained"
-              className="text-sm text-gray-600 hover:bg-gray-200 mb-2 sm:mb-0"
+              className="text-sm text-gray-600 hover:bg-gray-200 mb-2 sm:mb-4"
             >
               Buat akun
             </Button>
             <Button
               type="submit"
               variant="contained"
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-300"
+              className="bg-blue-500 text-white sm:mt-4 px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-300"
             >
               Login
             </Button>
