@@ -42,11 +42,12 @@ import { BsEye } from "react-icons/bs";
 import { AiOutlineHeart, AiOutlineCloseCircle } from "react-icons/ai";
 // import { useAuth0 } from "@auth0/auth0-react";
 import ProductDetail from "../components/ProductDetails";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { CartCont } from "../App";
+import { api } from "../utils";
 
 const Product = () => {
-  // {product, setProduct, detail, view, close, setClose, addToCart}
+  // {product, setProducts, detail, view, close, setClose, addToCart}
   // const { loginWithRedirect, isAuthenticated } = useAuth0();
   // const { cart, setCart } = useContext(CartCont);
   // add to cart
@@ -56,16 +57,20 @@ const Product = () => {
   const [close, setClose] = useState(false);
   const [detail, setDetail] = useState([]);
   //filter product
-  const [product, setProduct] = useState(ProductDetail);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    api("/products").then((products) => setProducts(products));
+  });
 
   const filterproduct = (product) => {
     const update = ProductDetail.filter((x) => {
       return x.Cat === product;
     });
-    setProduct(update);
+    setProducts(update);
   };
   const AllProducts = () => {
-    setProduct(ProductDetail);
+    setProducts(ProductDetail);
   };
 
   //product detail
@@ -115,8 +120,8 @@ const Product = () => {
                 >
                   <div className="mr-2 w-1/4">
                     <img
-                      src={item.Img}
-                      alt={item.Title}
+                      src={item.url}
+                      alt={item.title}
                       className="md:w-32 md:h-auto object-cover"
                     />
                   </div>
@@ -125,14 +130,14 @@ const Product = () => {
                       {item.Cat}
                     </h4>
                     <h2 className="mt-2 text-xl text-blue-900 capitalize">
-                      {item.Title}
+                      {item.title}
                     </h2>
                     <p className="text-gray-700 mt-2">
                       A Screen Everyone Will Love: Whether your family is
                       streaming or video chatting with friends tablet A8...{" "}
                     </p>
                     <h3 className="text-3xl text-blue-900 mt-2">
-                      {item.Price}
+                      {item.price}
                     </h3>
                     <button
                       className="mt-4 px-4 py-2 text-white bg-blue-800 text-lg rounded-md transition duration-500 hover:bg-blue-500"
@@ -199,7 +204,7 @@ const Product = () => {
           </div>
           <div className="w-full md:w-3/4 mt-6 md:mt-0 py-8 px-6">
             <div className="mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-              {product.map((item) => {
+              {products.map((item) => {
                 return (
                   <>
                     <div
@@ -208,9 +213,9 @@ const Product = () => {
                     >
                       <div className="relative border-b border-gray-300 pb-2">
                         <img
-                          src={item.Img}
-                          alt={item.Title}
-                          className="w-full h-40 object-cover hover:scale-110 transition duration-300"
+                          src={item.url}
+                          alt={item.title}
+                          className="w-1/2 h-68 object-cover hover:scale-110 transition duration-300"
                         />
                         <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col items-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
                           {/* {isAuthenticated ? ( */}
@@ -242,10 +247,10 @@ const Product = () => {
                       <div className="mt-2">
                         <p className="text-gray-500">{item.Cat}</p>
                         <h3 className="text-base mt-1 text-blue-900 transition duration-500 hover:text-blue-500">
-                          {item.Title}
+                          {item.title}
                         </h3>
                         <h4 className="mt-2 text-sm text-blue-500 font-semibold">
-                          ${item.Price}
+                          Rp.{item.price}
                         </h4>
                       </div>
                     </div>

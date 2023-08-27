@@ -24,7 +24,6 @@ const Header = ({ searchbtn }) => {
   // };
 
   useEffect(() => {
-    // Add event listener to listen for scroll
     const handleScroll = () => {
       if (window.scrollY > 0) {
         setIsHeaderFixed(true);
@@ -51,9 +50,7 @@ const Header = ({ searchbtn }) => {
         <div className="text-yellow-500 text-2xl">
           <FaTruckMoving />
         </div>
-        <p className="ml-2 text-sm font-semibold">
-          FREE Shipping when shopping up to $1000
-        </p>
+        <p className="ml-2 text-sm font-semibold">Serve as Best as Possible</p>
       </div>
       <div className={headerClass}>
         <div className="py-4 px-6 border-b border-blue-900">

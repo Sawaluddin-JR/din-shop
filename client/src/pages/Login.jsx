@@ -10,7 +10,7 @@ export default function Login() {
     password: "",
   });
   const navigate = useNavigate();
-
+  const [showPopUp, setShowPopup] = useState(true);
   const [user, setUser] = useOutletContext();
 
   const googleLogin = useGoogleLogin({
@@ -31,10 +31,10 @@ export default function Login() {
   if (user) {
     return <Navigate to="/" />;
   } else {
-    return (
-      <main className="flex">
+    return showPopUp ? (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-100">
         <form
-          className="m-auto bg-gray-100 p-8 rounded-3xl w-96 flex flex-col gap-4"
+          className="bg-white p-8 rounded-lg shadow-md w-full md:w-96 relative sm:max-w-md"
           onSubmit={async (e) => {
             e.preventDefault();
             const response = await fetch("http://localhost:3000/api/login", {
@@ -55,34 +55,72 @@ export default function Login() {
             }
           }}
         >
-          <h1 className="text-center text-xl">Login</h1>
-          <h1 className="text-center text-lg">Gunakan akun Integer Anda</h1>
-          <TextField
-            variant="outlined"
-            type="email"
-            label="Email"
-            className="w-full"
-            required
-            autoFocus
-            onChange={(e) => setLogin({ ...login, email: e.target.value })}
-          />
-          <TextField
-            variant="outlined"
-            type="password"
-            label="Kata sandi"
-            className="w-full"
-            required
-            onChange={(e) => setLogin({ ...login, password: e.target.value })}
-          />
-          <div className="flex justify-between">
-            <Button>Buat akun</Button>
-            <Button type="submit" variant="contained">
+          <button
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            onClick={() => setShowPopup(false)} // Menutup pop-up saat tombol diklik
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+          <h1 className="text-center text-2xl font-semibold mb-4">Login</h1>
+          <div className="mb-4">
+            <TextField
+              variant="outlined"
+              type="email"
+              label="Email"
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              required
+              autoFocus
+              onChange={(e) => setLogin({ ...login, email: e.target.value })}
+            />
+          </div>
+          <div className="mb-6">
+            <TextField
+              variant="outlined"
+              type="password"
+              label="Kata sandi"
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              required
+              onChange={(e) => setLogin({ ...login, password: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row justify-between items-center">
+            <Button
+              variant="contained"
+              className="text-sm text-gray-600 hover:bg-gray-200 mb-2 sm:mb-0"
+            >
+              Buat akun
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-300"
+            >
               Login
             </Button>
           </div>
-          <button onClick={() => googleLogin()}>Google</button>
+          <div className="flex items-center justify-center ">
+            <button
+              className="mt-6 text-blue-500 italic px-4 py-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring focus:border-red-300"
+              onClick={() => googleLogin()}
+            >
+              Login dengan Google
+            </button>
+          </div>
         </form>
-      </main>
-    );
+      </div>
+    ) : null;
   }
 }

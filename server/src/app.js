@@ -1,4 +1,5 @@
 import express from "express";
+import FileUpload from "express-fileupload";
 import cors from "cors";
 
 import jwt from "jsonwebtoken";
@@ -12,6 +13,10 @@ export const app = express();
 // middlewares
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json()); // membaca body
+app.use(FileUpload());
+
+// app.use(bodyParser.urlencoded({ extended: true }));
+//app.use(express.static("public"));
 
 // membuat route (langsung)
 app.get("/hello", (_req, res) => {
