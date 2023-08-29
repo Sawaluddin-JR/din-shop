@@ -1,12 +1,8 @@
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import { AiOutlineShoppingCart, AiOutlineCloseCircle } from "react-icons/ai";
-import { BsEye, BsArrowRight } from "react-icons/bs";
-import { AiOutlineHeart } from "react-icons/ai";
-// import { api } from "../utils.js";
-import { CartCont } from "../App.jsx";
+import { AiOutlineCloseCircle } from "react-icons/ai";
+import { BsArrowRight } from "react-icons/bs";
 import HomeProduct from "../components/HomeProduct.jsx";
-// import Protected from "../components/Protected.jsx";
 
 const category = [
   {
@@ -36,39 +32,17 @@ const category = [
 ];
 
 const Home = () => {
-  // const [setProducts] = useState([]);
-  const { cart, setCart } = useContext(CartCont);
   const [close, setClose] = useState(false);
   const [detail, setDetail] = useState([]);
   const user = useOutletContext()[0];
 
   console.log(user);
-  // useEffect(() => {
-  //   api
-  //     .get("/products")
-  //     .then((response) => response.json())
-  //     .then((products) => setProducts(products));
-  // });
 
   const view = (product) => {
     setDetail([{ ...product }]);
     setClose(true);
   };
 
-  // add to cart
-  const addtocart = (product) => {
-    const exsit = cart.find((x) => {
-      return x.id === product.id;
-    });
-    if (exsit) {
-      alert("This Product is already added to cart");
-    } else {
-      setCart([...cart, { ...product, qty: 1 }]);
-      alert("product is added to cart");
-    }
-  };
-  console.log(cart);
-  // if (user) {
   return (
     <main>
       {close ? (
@@ -104,12 +78,6 @@ const Home = () => {
                     <h3 className="text-3xl text-blue-900 mt-2">
                       Rp {item.price}
                     </h3>
-                    <button
-                      className="mt-4 px-4 py-2 text-white bg-blue-800 text-lg rounded-md transition duration-500 hover:bg-blue-500"
-                      onClick={() => addtocart(item)}
-                    >
-                      Add To Cart
-                    </button>
                   </div>
                 </div>
               );
@@ -160,54 +128,6 @@ const Home = () => {
           })}
         </div>
       </div>
-      {/* <div className="py-10 px-12">
-          <div className="container mx-auto grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            <div className="px-4">
-              <div className="text-pink-500 text-4xl">
-                <FiTruck />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-xl text-blue-800 font-semibold">
-                  Free Shipping
-                </h3>
-                <p className="text-gray-600">Oder above $1000</p>
-              </div>
-            </div>
-            <div className="px-4">
-              <div className="text-pink-500 text-4xl">
-                <BsCurrencyDollar />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-xl text-blue-800 font-semibold">
-                  Return & Refund
-                </h3>
-                <p className="text-gray-600">Money Back Gaurenty</p>
-              </div>
-            </div>
-            <div className="px-4">
-              <div className="text-pink-500 text-4xl">
-                <CiPercent />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-xl text-blue-800 font-semibold">
-                  Member Discount
-                </h3>
-                <p className="text-gray-600">On every Oder</p>
-              </div>
-            </div>
-            <div className="px-4">
-              <div className="text-pink-500 text-4xl">
-                <BiHeadphone />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-xl text-blue-800 font-semibold">
-                  Customer Support
-                </h3>
-                <p className="text-gray-600">Every Time Call Support</p>
-              </div>
-            </div>
-          </div>
-        </div> */}
       <div className="py-8 px-12">
         <h2 className="text-2xl text-blue-800 mb-6">Top Products</h2>
         <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mx-auto">
@@ -221,25 +141,8 @@ const Home = () => {
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-1/2 h-64 cover hover:scale-110 transition duration-300"
+                    className="w-1/2 h-64 hover:scale-110 transition duration-300"
                   />
-                  <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col items-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
-                    <li
-                      onClick={() => addtocart(item)}
-                      className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
-                    >
-                      <AiOutlineShoppingCart className="text-xl" />
-                    </li>
-                    <li
-                      onClick={() => view(item)}
-                      className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
-                    >
-                      <BsEye className="text-xl" />
-                    </li>
-                    <li className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white">
-                      <AiOutlineHeart className="text-xl" />
-                    </li>
-                  </div>
                 </div>
                 <div className="detail mt-2">
                   <p className="text-gray-600">{item.categories}</p>
@@ -248,6 +151,12 @@ const Home = () => {
                     Rp {item.price}
                   </h4>
                 </div>
+                <li
+                  onClick={() => view(item)}
+                  className="list-none text-gray-200 font-bold bg-blue-500 flex items-center justify-center w-full h-10 rounded-md mt-4 hover:bg-blue-700 cursor-pointer"
+                >
+                  Detail
+                </li>
               </div>
             );
           })}

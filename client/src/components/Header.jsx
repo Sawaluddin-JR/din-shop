@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { FaTruckMoving } from "react-icons/fa";
-import { AiOutlineHeart, AiOutlineUser } from "react-icons/ai";
+import { AiOutlineUser } from "react-icons/ai";
 import { BsBagCheck } from "react-icons/bs";
 import { CiLogin, CiLogout } from "react-icons/ci";
 import { Link } from "react-router-dom";
@@ -96,12 +96,6 @@ const Header = ({ searchbtn }) => {
                 <p className="text-black mr-2">.........</p>
               )}
               <div className="flex">
-                <Link
-                  to="/"
-                  className="text-blue-500 mr-6 text-2xl  hover:text-red-500"
-                >
-                  <AiOutlineHeart />
-                </Link>
                 <Link
                   to="/cart"
                   className="text-blue-500 mr-4 text-xl  hover:text-red-500"

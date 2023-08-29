@@ -8,7 +8,7 @@ online.
 
 
 ## Diagram ERD
-Coming soon...
+![](/client/public/erd.jpg)
 
 ## Tech Stack
 - Frontend : Reactjs

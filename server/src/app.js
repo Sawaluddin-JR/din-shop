@@ -9,6 +9,9 @@ import authMiddleware from "./middlewares/auth.js";
 import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
 
+import multer from "multer";
+const uploadPost = multer({ dest: "public/images" });
+
 export const app = express();
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));

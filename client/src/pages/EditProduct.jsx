@@ -24,24 +24,19 @@ const EditProduct = () => {
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            const response1 = await api.put(`/products/${product.id}`, product);
-            // console.log(message);
-            // alert(message);
-            // if (message === "data berhasil disimpan") {
-            //   const updatedProduct = await api(`/products/${product.id}`);
-            //   setProduct(updatedProduct);
-            // } else {
-            //   alert("Terjadi kesalahan saat menyimpan data.");
-            // }
-            // navigate("/product");
-
-            // const response1 = await api.put(`/products/${product.id}`, product);
-            const message = await response1.text();
+            const response1 = await api.put(`/products/${product.id}`, {
+              title: product.title,
+              categories: product.categories,
+              url: product.url,
+              price: product.price,
+              description: product.description,
+            });
+            // const message = await response1.text();
             // const response2 = await api.get("/products");
             // const product = await response2.json();
             // setProduct(product);
-            alert(message);
-            navigate("/product");
+            alert(response1);
+            navigate("/");
           }}
           className="mt-8 max-w-xl w-full mx-auto p-12 bg-white rounded-md shadow-md"
         >

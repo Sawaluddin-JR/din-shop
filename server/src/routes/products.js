@@ -53,6 +53,7 @@ router.post("/", async (req, res) => {
       "INSERT INTO products (title, categories, url, price, description) VALUES (?, ?, ?, ?, ?)"
     );
     // const imageUrl = req.file ? req.file.filename : "";
+    console.log(req.body);
     await prepare.execute([
       req.body.title,
       req.body.categories,
@@ -71,9 +72,16 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const prepare = await conn.prepare(
-      "UPDATE products SET title = ?, price = ? WHERE id = ?"
+      "UPDATE products SET categories = ?, title = ?, url = ?, price = ?, description = ? WHERE id = ?"
     );
-    await prepare.execute([req.body.title, req.body.price, req.params.id]);
+    await prepare.execute([
+      req.body.categories,
+      req.body.title,
+      rq.body.url,
+      req.body.price,
+      req.body.description,
+      req.params.id,
+    ]);
     res.send("Data berhasil disimpan");
   } catch (error) {
     res.status(500);

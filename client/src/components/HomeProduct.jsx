@@ -18,10 +18,10 @@ export const HomeProduct = [
   },
   {
     id: 3,
-    title: "Cancelling Headphones Wireless.",
+    title: "Laptob Gaming Amazing,original Import Amerika Serikat",
     categories: "Electronics",
-    price: "730.000",
-    image: "tp3.jpg",
+    price: "13.000.000",
+    image: "pngwing.com.png",
     description: "Limited items and guaranteed you will not be disappointed.",
   },
   {
