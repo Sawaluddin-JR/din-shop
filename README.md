@@ -4,7 +4,9 @@ DIN-SHOP adalah sistem aplikasi ecommerce yang mempermudah jual beli secara
 online.
 
 ## Fitur
+- Daftar sebagai user
 - Login
+- Tambah ke keranjang
 
 
 ## Diagram ERD
@@ -14,4 +16,4 @@ online.
 - Frontend : Reactjs
 - Backend : NodeJs,express
 - DB : Mariadb
-- Devops GitHub 
+- Devops : GitHub 
