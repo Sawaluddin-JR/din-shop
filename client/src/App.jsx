@@ -17,15 +17,6 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState();
 
-  // useEffect(() => {
-  //   api.get("/me").then((user) => {
-  //     if (!user) {
-  //       setUser(null);
-  //     }
-  //   });
-  // }, []);
-  // console.log(user);
-
   return (
     <div className="overflow-hidden">
       <CartCont.Provider value={{ cart, setCart }}>

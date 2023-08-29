@@ -46,7 +46,7 @@ const Home = () => {
   return (
     <main>
       {close ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-25">
+        <div className="fixed inset-0 z-20 flex products-center justify-center bg-black bg-opacity-25">
           <div className="sm:p-6 max-w-screen-md md:p-8 bg-white rounded-lg shadow-md">
             <button
               onClick={() => setClose(false)}
@@ -54,29 +54,29 @@ const Home = () => {
             >
               <AiOutlineCloseCircle />
             </button>
-            {detail.map((item) => {
+            {detail.map((product) => {
               return (
                 <div
-                  className="flex p-4 items-center border border-gray-200 rounded-md"
-                  key={item}
+                  className="flex p-4 products-center border border-gray-200 rounded-md"
+                  key={product}
                 >
                   <div className="mr-2 w-1/4">
                     <img
-                      src={item.image}
-                      alt={item.title}
+                      src={product.image}
+                      alt={product.title}
                       className="md:w-32 md:h-auto w-full object-cover"
                     />
                   </div>
                   <div className="ml-4">
                     <h4 className="text-sm font-light text-gray-500 tracking-wide uppercase">
-                      {item.categories}
+                      {product.categories}
                     </h4>
                     <h2 className="mt-2 text-xl text-blue-900 capitalize">
-                      {item.title}
+                      {product.title}
                     </h2>
-                    <p className="text-gray-700 mt-2">{item.description}</p>
+                    <p className="text-gray-700 mt-2">{product.description}</p>
                     <h3 className="text-3xl text-blue-900 mt-2">
-                      Rp {item.price}
+                      Rp {product.price}
                     </h3>
                   </div>
                 </div>
@@ -86,7 +86,7 @@ const Home = () => {
         </div>
       ) : null}
       <div className="bg-blue-100 py-8">
-        <div className="mx-auto flex justify-between items-center">
+        <div className="mx-auto flex justify-between products-center">
           <div className="ml-8 mt-8">
             <h2 className="text-6xl font-semibold text-blue-800 mr-64 mb-10">
               Spend Your Money Here,{" "}
@@ -94,7 +94,7 @@ const Home = () => {
             </h2>
             <Link
               to="/product"
-              className="px-5 py-4 rounded-md text-blue-800 bg-white transition duration-500 hover:bg-blue-800 hover:text-white flex items-center w-36"
+              className="px-5 py-4 rounded-md text-blue-800 bg-white transition duration-500 hover:bg-blue-800 hover:text-white flex products-center w-36"
             >
               <span className="mr-2">Shop Now</span>{" "}
               <BsArrowRight className="w-5 h-5" />
@@ -107,20 +107,22 @@ const Home = () => {
       </div>
       <div className="py-7 px-10 mt-12">
         <div className="container mx-auto grid gap-12 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {category.map((item) => {
+          {category.map((product) => {
             return (
-              <div key={item.id}>
+              <div key={product.id}>
                 <div className="px-4">
-                  <div className="w-36 h-36 bg-white rounded-md flex items-center justify-center">
+                  <div className="w-36 h-36 bg-white rounded-md flex products-center justify-center">
                     <img
-                      src={item.img}
-                      alt={item.categories}
+                      src={product.img}
+                      alt={product.categories}
                       className="h-32 w-32 py-4 px-4 max-h-[160px] hover:scale-110 transition duration-300 cursor-pointer"
                     />
                   </div>
                   <div className="mt-2 ml-7">
-                    <p className="text-blue-600 font-bold">{item.categories}</p>
-                    <p className="text-gray-600">{item.totalProduct}</p>
+                    <p className="text-blue-600 font-bold">
+                      {product.categories}
+                    </p>
+                    <p className="text-gray-600">{product.totalProduct}</p>
                   </div>
                 </div>
               </div>
@@ -131,29 +133,29 @@ const Home = () => {
       <div className="py-8 px-12">
         <h2 className="text-2xl text-blue-800 mb-6">Top Products</h2>
         <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mx-auto">
-          {HomeProduct.map((item) => {
+          {HomeProduct.map((product) => {
             return (
               <div
                 className="p-6 border border-gray-300 rounded-md mb-4"
-                key={item.id}
+                key={product.id}
               >
                 <div className="relative">
                   <img
-                    src={item.image}
-                    alt={item.title}
+                    src={product.image}
+                    alt={product.title}
                     className="w-1/2 h-64 hover:scale-110 transition duration-300"
                   />
                 </div>
                 <div className="detail mt-2">
-                  <p className="text-gray-600">{item.categories}</p>
-                  <h3 className="text-lg text-blue-800">{item.title}</h3>
+                  <p className="text-gray-600">{product.categories}</p>
+                  <h3 className="text-lg text-blue-800">{product.title}</h3>
                   <h4 className="mt-2 text-blue-600 font-semibold">
-                    Rp {item.price}
+                    Rp {product.price}
                   </h4>
                 </div>
                 <li
-                  onClick={() => view(item)}
-                  className="list-none text-gray-200 font-bold bg-blue-500 flex items-center justify-center w-full h-10 rounded-md mt-4 hover:bg-blue-700 cursor-pointer"
+                  onClick={() => view(product)}
+                  className="list-none text-gray-200 font-bold bg-blue-500 flex products-center justify-center w-full h-10 rounded-md mt-4 hover:bg-blue-700 cursor-pointer"
                 >
                   Detail
                 </li>
@@ -176,7 +178,7 @@ const Home = () => {
             </p>
             <Link
               to="/product"
-              className="px-5 py-2 mt-4 text-blue-800 bg-gray-400 rounded-md transition duration-500 hover:bg-white hover:text-black flex items-center w-36"
+              className="px-5 py-2 mt-4 text-blue-800 bg-gray-400 rounded-md transition duration-500 hover:bg-white hover:text-black flex products-center w-36"
             >
               <span className="mr-2">Shop Now </span>
               <BsArrowRight className="w-5 h-5" />

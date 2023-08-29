@@ -8,21 +8,9 @@ import { api } from "../utils";
 import { UserCont } from "../App";
 
 const Header = ({ searchbtn }) => {
-  // {searchbtn}
   const { user, setUser } = useContext(UserCont);
   const [search, setSearch] = useState();
   const [isHeaderFixed, setIsHeaderFixed] = useState(false);
-  // const [product, setProduct] = useState([]);
-
-  // const searchbtn = (product) => {
-  //   const change = product.filter((x) => {
-  //     return x.categories === product;
-  //   });
-  //   setProduct(change);
-  // };
-  // useEffect(() => {
-  //   api("/products").then((product) => setProduct(product));
-  // });
 
   useEffect(() => {
     const handleScroll = () => {

@@ -1,14 +1,5 @@
 import { AiOutlineInstagram } from "react-icons/ai";
-import {
-  BsGithub,
-  BsTelegram,
-  BsYoutube,
-  // BsHouseDoorFill,
-  // BsCartFill,
-  // BsInfoCircleFill,
-  // BsEnvelopeFill,
-} from "react-icons/bs";
-//import { Link } from "react-router-dom";
+import { BsGithub, BsTelegram, BsYoutube } from "react-icons/bs";
 
 const Footer = () => {
   return (
@@ -64,35 +55,6 @@ const Footer = () => {
             </a>
           </div>
         </div>
-        {/* <div className="mt-6 md:mt-0 text-gray-300 md:mr-20">
-          <h3 className="text-2xl text-gray-800 mb-2">Page</h3>
-          <ul className="flex flex-col">
-            <li className="text-gray-900 hover:underline mb-2">
-              <Link to="/cart" className="flex items-center">
-                <BsCartFill className="text-gray-600 hover:text-blue-500 transition text-lg mr-2" />
-                <span>Cart</span>
-              </Link>
-            </li>
-            <li className="text-gray-900 hover:underline mb-2">
-              <Link to="/" className="flex items-center">
-                <BsHouseDoorFill className="text-gray-600 hover:text-blue-500 transition text-lg mr-2" />
-                <span>Home</span>
-              </Link>
-            </li>
-            <li className="text-gray-900 hover:underline mb-2">
-              <Link to="/about" className="flex items-center">
-                <BsInfoCircleFill className="text-gray-600 hover:text-blue-500 transition text-lg mr-2" />
-                <span>About</span>
-              </Link>
-            </li>
-            <li className="text-gray-900 hover:underline mb-2">
-              <Link to="/contact" className="flex items-center">
-                <BsEnvelopeFill className="text-gray-600 hover:text-blue-500 transition text-lg mr-2" />
-                <span>Contact</span>
-              </Link>
-            </li>
-          </ul>
-        </div> */}
       </div>
     </div>
   );

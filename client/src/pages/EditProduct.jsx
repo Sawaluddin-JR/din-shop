@@ -17,8 +17,6 @@ const EditProduct = () => {
 
   console.log(product);
   return (
-    // <main className="bg-gray-100 min-h-screen p-4">
-
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-25">
       {product ? (
         <form
@@ -31,10 +29,6 @@ const EditProduct = () => {
               price: product.price,
               description: product.description,
             });
-            // const message = await response1.text();
-            // const response2 = await api.get("/products");
-            // const product = await response2.json();
-            // setProduct(product);
             alert(response1);
             navigate("/");
           }}
@@ -105,7 +99,6 @@ const EditProduct = () => {
         "loading"
       )}
     </div>
-    // </main>
   );
 };
 

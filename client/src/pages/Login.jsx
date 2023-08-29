@@ -46,10 +46,6 @@ export default function Login() {
                 const user = await response.json();
                 setUser(user);
               }
-              // const auth = await response.json();
-              // localStorage.setItem("token", auth.token);
-              // setUser(auth.user);
-              // navigate("/");
             } else {
               const message = await response.text();
               alert(message);

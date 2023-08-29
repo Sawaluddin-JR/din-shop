@@ -1,23 +1,7 @@
 import express from "express";
 import conn from "../db.js";
-import multer from "multer";
 
 const router = express.Router();
-router.post("/all", async (_req, res) => {
-  for await (const product of products) {
-    const prepare = await conn.prepare(
-      "INSERT INTO products (categories, title, url, price, description) VALUES (?, ?, ?, ?, ?)"
-    );
-    await prepare.execute([
-      product.categories,
-      product.title,
-      product.url,
-      product.price,
-      product.description,
-    ]);
-  }
-  res.send("Semua product berhasil disimpan.");
-});
 
 // simpan semua
 
@@ -44,15 +28,11 @@ router.get("/:id", async (req, res) => {
 });
 
 // buat
-
-// const upload = multer({ storage: storage });
-
 router.post("/", async (req, res) => {
   try {
     const prepare = await conn.prepare(
       "INSERT INTO products (title, categories, url, price, description) VALUES (?, ?, ?, ?, ?)"
     );
-    // const imageUrl = req.file ? req.file.filename : "";
     console.log(req.body);
     await prepare.execute([
       req.body.title,
@@ -100,7 +80,5 @@ router.delete("/:id", async (req, res) => {
     res.send(error);
   }
 });
-
-// hapus semua
 
 export default router;

@@ -9,11 +9,6 @@ import Protected from "../components/Protected";
 import { BsEye } from "react-icons/bs";
 
 const Product = () => {
-  // {product, setProducts, detail, view, close, setClose, addToCart}
-  // const { loginWithRedirect, isAuthenticated } = useAuth0();
-  // const { cart, setCart } = useContext(CartCont);
-  // add to cart
-  // const [cart, setCart] = useState([]);
   const { cart, setCart } = useContext(CartCont);
   const [openAdd, setOpenAdd] = useState(false);
   const navigate = useNavigate();
@@ -30,7 +25,6 @@ const Product = () => {
     description: "",
   });
   const user = useOutletContext()[0];
-  // const [category, setCategory] = useState([]);
 
   useEffect(() => {
     api
@@ -61,10 +55,10 @@ const Product = () => {
 
   // add to cart
   const addToCart = (product) => {
-    const item = cart.find((x) => {
-      return x.id === product.id;
+    const products = cart.find((x) => {
+      return x.id === products.id;
     });
-    if (item) {
+    if (product) {
       alert("This Product is already added to cart");
     } else {
       setCart([...cart, { ...product, qty: 1 }]);
@@ -84,7 +78,7 @@ const Product = () => {
   return (
     <Protected>
       {close ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-25">
+        <div className="fixed inset-0 z-20 flex products-center justify-center bg-black bg-opacity-25">
           <div className="sm:p-6 max-w-screen-md md:p-8 bg-white rounded-lg shadow-md">
             <button
               onClick={() => setClose(false)}
@@ -92,36 +86,33 @@ const Product = () => {
             >
               <AiOutlineCloseCircle />
             </button>
-            {detail.map((item, i) => {
+            {detail.map((product, i) => {
               return (
                 <div
-                  className="flex p-4 items-center border border-gray-200 rounded-md"
+                  className="flex p-4 products-center border border-gray-200 rounded-md"
                   key={i}
                 >
                   <div className="mr-2 w-1/4">
                     <img
-                      src={item.url}
-                      alt={item.title}
+                      src={product.url}
+                      alt={product.title}
                       className="md:w-32 md:h-auto object-cover"
                     />
                   </div>
                   <div className="ml-4">
                     <h4 className="text-sm font-light text-gray-500 tracking-wide uppercase">
-                      {item.Cat}
+                      {product.categories}
                     </h4>
                     <h2 className="mt-2 text-xl text-blue-900 capitalize">
-                      {item.title}
+                      {product.title}
                     </h2>
-                    <p className="text-gray-700 mt-2">
-                      A Screen Everyone Will Love: Whether your family is
-                      streaming or video chatting with friends tablet A8...{" "}
-                    </p>
+                    <p className="text-gray-700 mt-2">{product.description}</p>
                     <h3 className="text-3xl text-blue-900 mt-2">
-                      {item.price}
+                      {product.price}
                     </h3>
                     <button
                       className="mt-4 px-4 py-2 text-white bg-blue-800 text-lg rounded-md transition duration-500 hover:bg-blue-500"
-                      onClick={() => addToCart(item)}
+                      onClick={() => addToCart(product)}
                     >
                       Add To Cart
                     </button>
@@ -173,7 +164,7 @@ const Product = () => {
       <div className="py-8 px-12">
         <h2 className="text-2xl text-blue-800 mb-6">Products</h2>
         <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((item, i) => {
+          {products.map((product, i) => {
             return (
               <div
                 className="p-6 border border-gray-300 transition duration-500 ease-in-out cursor-pointer rounded-md hover:shadow-md"
@@ -181,25 +172,25 @@ const Product = () => {
               >
                 <div className="relative">
                   <img
-                    src={item.url}
-                    alt={item.title}
+                    src={product.url}
+                    alt={product.title}
                     className="w-1/2 h-64 hover:scale-110 transition duration-300"
                   />
-                  <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col items-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
+                  <div className="absolute top-6 -right-11 hover:right-5 p-2 flex flex-col products-center justify-center opacity-0 gap-y-2 hover:opacity-100 transition-all">
                     <li
-                      onClick={() => addToCart(item)}
+                      onClick={() => addToCart(product)}
                       className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                     >
                       <AiOutlineShoppingCart />
                     </li>
                     <li
-                      onClick={() => view(item)}
+                      onClick={() => view(product)}
                       className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                     >
                       <BsEye />
                     </li>
                     <Link
-                      to={`/products/${item.id}/edit`}
+                      to={`/products/${product.id}/edit`}
                       className="list-none p-2 bg-white shadow-md rounded-lg text-blue-800 cursor-pointer hover:bg-blue-800 hover:text-white"
                     >
                       <FaEdit />
@@ -209,11 +200,11 @@ const Product = () => {
                         onClick={async () => {
                           if (
                             confirm(
-                              `Apakah Anda yakin ingin menghapus ${item.title}?`
+                              `Apakah Anda yakin ingin menghapus ${product.title}?`
                             )
                           ) {
                             const response1 = await api.delete(
-                              `/products/${item.id}`
+                              `/products/${product.id}`
                             );
                             const message = await response1.text();
                             const response2 = await api.get("/products");
@@ -229,12 +220,12 @@ const Product = () => {
                   </div>
                 </div>
                 <div className="mt-2">
-                  <p className="text-gray-500">{item.categories}</p>
+                  <p className="text-gray-500">{product.categories}</p>
                   <h3 className="text-base mt-1 text-blue-900 transition duration-500 hover:text-blue-500">
-                    {item.title}
+                    {product.title}
                   </h3>
                   <h4 className="mt-2 text-sm text-blue-500 font-semibold">
-                    Rp.{item.price}
+                    Rp.{product.price}
                   </h4>
                 </div>
               </div>
@@ -243,14 +234,11 @@ const Product = () => {
         </div>
       </div>
       {openAdd ? (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black bg-opacity-25">
+        <div className="fixed inset-0 z-20 flex products-center justify-center bg-black bg-opacity-25">
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               setnewProducts({});
-              // const message = await api("/products", "POST", newProducts);
-              // const products = await api("/products");
-
               const response1 = await api.post("/products", newProducts);
               const message = await response1.text();
               const response2 = await api.get("/products");
@@ -258,19 +246,6 @@ const Product = () => {
               setProducts(products);
               alert(message);
               navigate("/product");
-
-              // const uploadImg = new FormData();
-              // uploadImg.append("profil", products);
-              // await fetch("http://localhost:3000/api/products", {
-              //   method: "POST",
-              //   body: uploadImg,
-              //   credentials: "include",
-              // }).then(async (response) => {
-              //   if (response.ok) {
-              //     alert(await response.text());
-              //     location.reaload();
-              //   }
-              // });
             }}
             className="max-w-xl w-full mx-auto p-12 bg-white rounded-md shadow-md"
           >
@@ -311,19 +286,6 @@ const Product = () => {
                 type="text"
                 value={newProducts.url ?? ""}
                 onChange={(e) => {
-                  // console.log(e.target.files[0]);
-                  // const file = e.target.files[0];
-                  // if (file) {
-                  //   const reader = new FileReader();
-                  //   reader.onload = (event) => {
-                  //     const base64Image = event.target.result;
-                  //     setnewProducts({
-                  //       ...newProducts,
-                  //       url: base64Image,
-                  //     });
-                  //   };
-                  //   reader.readAsDataURL(file);
-                  // }
                   setnewProducts({
                     ...newProducts,
                     url: e.target.value,
