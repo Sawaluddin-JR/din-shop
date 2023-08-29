@@ -1,15 +1,17 @@
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
-import { Navigate, useNavigate, useOutletContext } from "react-router-dom";
+import { Navigate, useOutletContext } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
+import { Link } from "react-router-dom";
+import { api } from "../utils";
 
 export default function Login() {
   const [login, setLogin] = useState({
     email: "",
     password: "",
   });
-  const navigate = useNavigate();
+
   const [showPopUp, setShowPopup] = useState(true);
   const [user, setUser] = useOutletContext();
 
@@ -37,18 +39,17 @@ export default function Login() {
           className="bg-white p-8 rounded-lg shadow-md w-full md:w-96 relative sm:max-w-md"
           onSubmit={async (e) => {
             e.preventDefault();
-            const response = await fetch("http://localhost:3000/api/login", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(login),
-            });
+            const response = await api.post("/auth/login", login);
             if (response.ok) {
-              const auth = await response.json();
-              localStorage.setItem("token", auth.token);
-              setUser(auth.user);
-              navigate("/");
+              const response = await api.get("/auth/me");
+              if (response.ok) {
+                const user = await response.json();
+                setUser(user);
+              }
+              // const auth = await response.json();
+              // localStorage.setItem("token", auth.token);
+              // setUser(auth.user);
+              // navigate("/");
             } else {
               const message = await response.text();
               alert(message);
@@ -90,7 +91,7 @@ export default function Login() {
             <TextField
               variant="outlined"
               type="password"
-              label="Kata sandi"
+              label="Password"
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
               required
               onChange={(e) => setLogin({ ...login, password: e.target.value })}
@@ -101,7 +102,7 @@ export default function Login() {
               variant="contained"
               className="text-sm text-gray-600 hover:bg-gray-200 mb-2 sm:mb-4"
             >
-              Buat akun
+              <Link to={"/register"}>Register</Link>
             </Button>
             <Button
               type="submit"

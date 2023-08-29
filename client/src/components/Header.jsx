@@ -1,19 +1,16 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FaTruckMoving } from "react-icons/fa";
-import { AiOutlineHeart } from "react-icons/ai";
+import { AiOutlineHeart, AiOutlineUser } from "react-icons/ai";
 import { BsBagCheck } from "react-icons/bs";
-// import { AiOutlineUser } from "react-icons/ai";
-import { CiLogin } from "react-icons/ci";
-// import { CiLogout } from "react-icons/ci";
+import { CiLogin, CiLogout } from "react-icons/ci";
 import { Link } from "react-router-dom";
-// import { api } from "../utils";
-// import { useAuth0 } from "@auth0/auth0-react";
+import { api } from "../utils";
+import { UserCont } from "../App";
 
-// eslint-disable-next-line react/prop-types
 const Header = ({ searchbtn }) => {
   // {searchbtn}
+  const { user, setUser } = useContext(UserCont);
   const [search, setSearch] = useState();
-  // const { loginWithRedirect, logout, user, isAuthenticated } = useAuth0();
   const [isHeaderFixed, setIsHeaderFixed] = useState(false);
   // const [product, setProduct] = useState([]);
 
@@ -86,14 +83,18 @@ const Header = ({ searchbtn }) => {
               </button>
             </div>
             <div className="flex items-center">
-              {/* {isAuthenticated && (
+              {user ? (
                 <div className="flex items-center mr-6">
                   <div className="text-2xl text-blue-900">
                     <AiOutlineUser />
                   </div>
-                  <p className="text-sm font-semibold">Hello, {user.name}</p>
+                  <p className="text-sm font-semibold text-gray-600">
+                    Hello, {user?.name}
+                  </p>
                 </div>
-              )} */}
+              ) : (
+                <p className="text-black mr-2">.........</p>
+              )}
               <div className="flex">
                 <Link
                   to="/"
@@ -115,7 +116,7 @@ const Header = ({ searchbtn }) => {
           <div className="flex justify-between items-center">
             <div className="">
               <ul className="flex">
-                <li className="mr-8">
+                <li className="mr-8 bg-gray-300 w-16 h-7 text-center rounded-md">
                   <Link
                     to="/"
                     className="text-blue-900 hover:text-red-500 hover:text-md"
@@ -150,30 +151,25 @@ const Header = ({ searchbtn }) => {
               </ul>
             </div>
             <div className="text-2xl">
-              {/* {isAuthenticated ? (
+              {user ? (
                 <button
-                  onClick={() =>
-                    logout({
-                      logoutParams: { returnTo: window.location.origin },
-                    })
-                  }
+                  onClick={async () => {
+                    const response = await api.post("/auth/logout");
+                    if (response.ok) {
+                      setUser();
+                    }
+                  }}
                   className="text-blue-900 text-2xl  hover:text-red-500"
                 >
                   <CiLogout />
                 </button>
               ) : (
-                <button
-                  onClick={() => loginWithRedirect()}
-                  className="text-blue-900 text-3xl  hover:text-red-500"
-                >
-                  <CiLogin />
-                </button>
-              )} */}
-              <Link to={"/login"}>
-                <button className="text-blue-900 text-3xl  hover:text-red-500">
-                  <CiLogin />
-                </button>
-              </Link>
+                <Link to={"/login"}>
+                  <button className="text-blue-900 text-3xl  hover:text-red-500">
+                    <CiLogin />
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

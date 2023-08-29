@@ -11,19 +11,23 @@ import Product from "./pages/Product.jsx";
 import Cart from "./pages/Cart.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
+import Register from "./pages/Register.jsx";
 
 const router = createBrowserRouter([
   {
-    path: "/",
     element: <App />,
     children: [
+      {
+        index: true,
+        element: <Home />,
+      },
       {
         path: "/login",
         element: <Login />,
       },
       {
-        path: "/",
-        element: <Home />,
+        path: "/register",
+        element: <Register />,
       },
       {
         path: "/about",
