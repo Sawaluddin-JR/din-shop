@@ -55,3 +55,13 @@ INSERT INTO products VALUES
 ('7','Woman is clothing','BIYLACLESEN Women','https://fakestoreapi.com/img/51Y5NI-I5jL._AC_UX679_.jpg','569000','Note:The Jackets is US standard size, Please choose size as your usual wear Material: 100% Polyester; Detachable Liner Fabric: Warm Fleece. Detachable Functional Liner: Skin Friendly, Lightweigt and Warm.Stand Collar Liner jacket, keep you warm in cold weather. '),
 ('8','Woman is clothing','MBJ Women iss Solid Short Sleeve','https://fakestoreapi.com/img/71z3kpMAYsL._AC_UY879_.jpg','23000','95% RAYON 5% SPANDEX, Made in USA or Imported, Do Not Bleach, Lightweight fabric with great stretch for comfort, Ribbed on sleeves and neckline Double stitching on bottom hem'),
 ('9','Woman is clothing','DANVOUY Womens T Shirt Casual ','https://fakestoreapi.com/img/61pHAEJ4NML._AC_UX679_.jpg','320000','95%Cotton,5%Spandex, Features: Casual, Short Sleeve, Letter Print,V-Neck,Fashion Tees, The fabric is soft and has some stretch., Occasion: Casual/Office/Beach/School/Home/Street. Season: Spring,Summer,Autumn,Winter.')
+
+INSERT INTO  users VALUES 
+('1','dede','3545345345','Bandung','dede@gmail.com','$2a$10$r635oB4vLFAQNCNTjKYsPe5BvdODAW5f.otpg4akqDB/qQ23x/XbW','0');
+('2','Sawaluddin','082172316332','Bandung','sawaluddin@gmail.com','$2a$10$sSVzjyLVktAgErTudwADXOhzgVkx3nDH8C8i3AyG3u/VHx00X7vCq','1');
+
+INSERT INTO categories VALUES 
+('1','Men is clothing','Pakaian khusus pria');
+('2','Woman is clothing','Pakaian khusus wanita');
+('3','Jawerly','Barang-barang perhiasan');
+('4','Electronics','Barang-barang elektronik');
