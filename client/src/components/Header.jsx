@@ -7,9 +7,8 @@ import { Link } from "react-router-dom";
 import { api } from "../utils";
 import { UserCont } from "../App";
 
-const Header = ({ searchbtn }) => {
+const Header = () => {
   const { user, setUser } = useContext(UserCont);
-  const [search, setSearch] = useState();
   const [isHeaderFixed, setIsHeaderFixed] = useState(false);
 
   useEffect(() => {
@@ -53,22 +52,6 @@ const Header = ({ searchbtn }) => {
               <h1 className="text-2xl font-bold text-gray-800 ml-1">
                 DIN-<span className="text-blue-900">SHOP</span>
               </h1>
-            </div>
-            <div className="flex items-center">
-              <input
-                type="text"
-                value={search}
-                placeholder="Search Your Product..."
-                autoComplete="off"
-                onChange={(e) => setSearch(e.target.value)}
-                className="py-2 px-6 border border-blue-600 mr-1 text-black"
-              />
-              <button
-                onClick={() => searchbtn(search)}
-                className="py-2 w-full px-4 bg-blue-500 text-white  hover:bg-blue-800"
-              >
-                Search
-              </button>
             </div>
             <div className="flex items-center">
               {user ? (
