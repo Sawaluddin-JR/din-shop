@@ -46,8 +46,8 @@ router.post("/daftar", async (req, res) => {
     const salt = await bcrypt.genSalt();
     const hash = await bcrypt.hash(req.body.password, salt);
 
-    await client.query(
-      "INSERT INTO users (name, telephone,address, email, password, is_admin) values (?, ?, ?, ?, ?,?)"
+    const prepare = await conn.prepare(
+      "INSERT INTO users (name, telephone, address, email, password, is_admin) VALUES (?, ?, ?, ?, ?, ?)"
     );
     await prepare.execute([
       req.body.name,
