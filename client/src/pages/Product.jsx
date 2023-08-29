@@ -14,10 +14,8 @@ const Product = () => {
   const { cart, setCart } = useContext(CartCont);
   const [openAdd, setOpenAdd] = useState(false);
   const navigate = useNavigate();
-  //product Detail
   const [close, setClose] = useState(false);
   const [detail, setDetail] = useState([]);
-  //filter product
   const [products, setProducts] = useState([]);
   const [newProducts, setnewProducts] = useState({
     categories: "",
@@ -34,16 +32,6 @@ const Product = () => {
       .then((response) => response.json())
       .then((products) => setProducts(products));
   }, [user, navigate]);
-
-  const filterproduct = (product) => {
-    const update = products.filter((x) => {
-      return x.categories === product;
-    });
-    setProducts(update);
-  };
-  const AllProducts = () => {
-    setProducts(products);
-  };
 
   //product detail
   const view = (product) => {
@@ -63,15 +51,6 @@ const Product = () => {
       alert("product is added to cart");
     }
   };
-  //   if (cart.find((p) => p.id == product.id)) {
-  //     setCart(
-  //       cart.map((p) => (p.id == product.id ? { ...p, count: p.count + 1 } : p))
-  //     );
-  //   } else {
-  //     setCart([...cart, { ...product, count: 1 }]);
-  //   }
-  // };
-  // console.log(cart);
 
   return (
     <Protected>

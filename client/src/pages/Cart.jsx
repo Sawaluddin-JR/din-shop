@@ -5,8 +5,6 @@ import { CartCont } from "../App";
 
 const Cart = () => {
   const { cart, setCart } = useContext(CartCont);
-  // const [cart, setCart] = useState([]);
-  // increace qty
   const incQty = (product) => {
     setCart((prevCart) => {
       return prevCart.map((item) => {
