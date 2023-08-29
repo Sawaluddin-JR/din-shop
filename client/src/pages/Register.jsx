@@ -3,7 +3,7 @@ import TextField from "@mui/material/TextField";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { api } from "../utils.js";
+import { api } from "../utils";
 
 export default function Register() {
   const navigate = useNavigate();
