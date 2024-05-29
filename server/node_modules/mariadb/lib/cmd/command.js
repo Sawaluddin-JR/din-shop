@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const EventEmitter = require('events');
@@ -38,7 +41,7 @@ class Command extends EventEmitter {
       errno,
       info,
       sqlState,
-      this.displaySql(),
+      this.opts && this.opts.logParam ? this.displaySql() : this.sql,
       fatal,
       this.cmdParam ? this.cmdParam.stack : null,
       false
@@ -66,6 +69,20 @@ class Command extends EventEmitter {
     const err = this.throwUnexpectedError(msg, fatal, info, sqlState, errno);
     this.emit('end');
     return err;
+  }
+
+  /**
+   * When command cannot be sent due to error.
+   * (this is only on start command)
+   *
+   * @param msg error message
+   * @param errno error number
+   * @param info connection information
+   */
+  sendCancelled(msg, errno, info) {
+    const err = Errors.createError(msg, errno, info, 'HY000', this.opts.logParam ? this.displaySql() : this.sql);
+    this.emit('send_end');
+    this.throwError(err, info);
   }
 
   /**

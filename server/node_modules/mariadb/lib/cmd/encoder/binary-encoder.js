@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 class BinaryEncoder {
@@ -9,7 +12,7 @@ class BinaryEncoder {
    * @param opts    connection options
    * @param info    connection information
    */
-  writeParam(out, value, opts, info) {
+  static writeParam(out, value, opts, info) {
     // GEOJSON are not checked, because change to null/Buffer on parameter validation
     switch (typeof value) {
       case 'boolean':

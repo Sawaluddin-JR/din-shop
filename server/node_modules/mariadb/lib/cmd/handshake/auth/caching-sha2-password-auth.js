@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 const PluginAuth = require('./plugin-auth');
 const fs = require('fs');
 const Errors = require('../../../misc/errors');
@@ -95,8 +98,8 @@ class CachingSha2PasswordAuth extends PluginAuth {
               out.writeInt8(0x02);
               out.flushPacket();
             }
-            return;
         }
+        return;
 
       case State.REQUEST_SERVER_KEY:
         this.publicKey = Sha256PasswordAuth.retrievePublicKey(packet.toString(undefined, 1));

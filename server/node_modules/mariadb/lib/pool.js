@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const { EventEmitter } = require('events');
@@ -75,7 +78,7 @@ class Pool extends EventEmitter {
               continue;
             }
             //since connection did have an error, other waiting connection might too
-            //forcing validation when borrowed next time, even if "minDelayValidation" is not reached.
+            //force validation when borrowed next time, even if "minDelayValidation" is not reached.
             currConn.lastUse = Math.min(currConn.lastUse, Date.now() - pool.opts.minDelayValidation);
             idx++;
           }
@@ -94,6 +97,9 @@ class Pool extends EventEmitter {
       })
       .catch((err) => {
         //if timeout is reached or authentication fail return error
+        if (err instanceof AggregateError) {
+          err = err.errors[0];
+        }
         if (
           this.#closed ||
           (err.errno && (err.errno === 1524 || err.errno === 1045 || err.errno === 1698)) ||
@@ -153,7 +159,7 @@ class Pool extends EventEmitter {
     conn.leakProcess = setTimeout(
       (conn) => {
         conn.leaked = true;
-        console.log(
+        conn.opts.logger.warning(
           `A possible connection leak on the thread ${
             conn.info.threadId
           } (the connection not returned to the pool since ${
@@ -171,7 +177,9 @@ class Pool extends EventEmitter {
       clearTimeout(conn.leakProcess);
       conn.leakProcess = null;
       if (conn.leaked) {
-        console.log(`Previous possible leak connection with thread ${conn.info.threadId} was returned to pool`);
+        conn.opts.logger.warning(
+          `Previous possible leak connection with thread ${conn.info.threadId} was returned to pool`
+        );
       }
     }
   }
@@ -341,6 +349,7 @@ class Pool extends EventEmitter {
       if (request.timeout <= currTime) {
         this.#requests.shift();
 
+        let cause = this.activeConnections() === 0 ? this.#errorCreatingConnection : null;
         let err = Errors.createError(
           `retrieve connection from pool timeout after ${Math.abs(
             Date.now() - (request.timeout - this.opts.acquireTimeout)
@@ -350,14 +359,11 @@ class Pool extends EventEmitter {
           'HY000',
           null,
           false,
-          request.stack
+          request.stack,
+          null,
+          cause
         );
 
-        // in order to provide more information when configuration is wrong / server is down
-        if (this.activeConnections() === 0 && this.#errorCreatingConnection) {
-          const errConnMsg = this.#errorCreatingConnection.message.split('\n')[0];
-          err.message = err.message + `\n    connection error: ${errConnMsg}`;
-        }
         request.reject(err);
       } else {
         this.#requestTimeoutId = setTimeout(this._requestTimeoutHandler.bind(this), request.timeout - currTime);
@@ -387,13 +393,6 @@ class Pool extends EventEmitter {
       info = conn.info;
     }
     return info;
-  }
-
-  _rejectTask(task, err) {
-    clearTimeout(this.#requestTimeoutId);
-    this.#requestTimeoutId = null;
-    task.reject(err);
-    this._requestTimeoutHandler();
   }
 
   async _createConnection() {
@@ -517,7 +516,15 @@ class Pool extends EventEmitter {
   getConnection(cmdParam) {
     if (this.#closed) {
       return Promise.reject(
-        Errors.createError('pool is closed', Errors.ER_POOL_ALREADY_CLOSED, null, 'HY000', null, false, cmdParam.stack)
+        Errors.createError(
+          'pool is closed',
+          Errors.ER_POOL_ALREADY_CLOSED,
+          null,
+          'HY000',
+          cmdParam === null ? null : cmdParam.sql,
+          false,
+          cmdParam.stack
+        )
       );
     }
     return this._doAcquire().then(
@@ -533,7 +540,7 @@ class Pool extends EventEmitter {
             Errors.ER_POOL_ALREADY_CLOSED,
             null,
             'HY000',
-            null,
+            cmdParam === null ? null : cmdParam.sql,
             false,
             cmdParam.stack
           );

@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const PluginAuth = require('./plugin-auth');
@@ -48,6 +51,17 @@ class NativePasswordAuth extends PluginAuth {
       returnBytes[i] = stage1[i] ^ digest[i];
     }
     return returnBytes;
+  }
+
+  permitHash() {
+    return true;
+  }
+
+  hash(conf) {
+    let hash = Crypto.createHash('sha1');
+    let stage1 = hash.update(conf.password, 'utf8').digest();
+    hash = Crypto.createHash('sha1');
+    return hash.update(stage1).digest();
   }
 }
 

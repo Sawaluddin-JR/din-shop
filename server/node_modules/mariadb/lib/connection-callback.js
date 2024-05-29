@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Errors = require('./misc/errors');
@@ -141,7 +144,19 @@ class ConnectionCallback {
 
   execute(sql, values, callback) {
     const cmdParam = ConnectionCallback._PARAM(this.#conn.opts, sql, values, callback);
-    return ConnectionCallback._EXECUTE_CMD(this.#conn, cmdParam);
+    cmdParam.opts = cmdParam.opts ? Object.assign(cmdParam.opts, { metaAsArray: true }) : { metaAsArray: true };
+    this.#conn
+      .prepareExecute(cmdParam)
+      .then(([rows, meta]) => {
+        if (cmdParam.callback) {
+          cmdParam.callback(null, rows, meta);
+        }
+      })
+      .catch((err) => {
+        if (cmdParam.callback) {
+          cmdParam.callback(err);
+        }
+      });
   }
 
   static _PARAM(options, sql, values, callback) {
@@ -161,7 +176,7 @@ class ConnectionCallback {
       _sql = sql;
     }
     const cmdParam = new CommandParameter(_sql, _values, _cmdOpt, _cb);
-    if (options.trace) Error.captureStackTrace(cmdParam);
+    if (options.trace) Error.captureStackTrace(cmdParam, ConnectionCallback._PARAM);
     return cmdParam;
   }
 

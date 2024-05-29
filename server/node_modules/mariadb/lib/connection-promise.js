@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Stream = require('./cmd/stream');
@@ -100,24 +103,17 @@ class ConnectionPromise {
       if (_cmdOpt.values) _values = _cmdOpt.values;
     }
     const cmdParam = new CommandParameter(_sql, _values, _cmdOpt);
-    if (options.trace) Error.captureStackTrace(cmdParam);
+    if (options.trace) Error.captureStackTrace(cmdParam, ConnectionPromise._PARAM);
     return cmdParam;
   }
 
   execute(sql, values) {
     const cmdParam = ConnectionPromise._PARAM(this.#conn.opts, sql, values);
-    return ConnectionPromise._EXECUTE_CMD(this.#conn, cmdParam);
+    return this.#conn.prepareExecute(cmdParam);
   }
 
   static _EXECUTE_CMD(conn, cmdParam) {
-    return new Promise(conn.prepare.bind(conn, cmdParam))
-      .then((prepare) => {
-        return prepare.execute(cmdParam.values, cmdParam.opts, null, cmdParam.stack).finally(() => prepare.close());
-      })
-      .catch((err) => {
-        if (conn.opts.logger.error) conn.opts.logger.error(err);
-        throw err;
-      });
+    return conn.prepareExecute(cmdParam);
   }
 
   prepare(sql) {

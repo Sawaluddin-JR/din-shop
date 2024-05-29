@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 // noinspection JSBitwiseOperatorUsage
 
 'use strict';
@@ -81,21 +84,21 @@ class ChangeUser extends Authentication {
 
       const encoding = info.collation.charset;
 
-      writeParam(out, '_client_name', encoding);
-      writeParam(out, 'MariaDB connector/Node', encoding);
+      writeAttribute(out, '_client_name', encoding);
+      writeAttribute(out, 'MariaDB connector/Node', encoding);
 
       let packageJson = require('../../package.json');
-      writeParam(out, '_client_version', encoding);
-      writeParam(out, packageJson.version, encoding);
+      writeAttribute(out, '_client_version', encoding);
+      writeAttribute(out, packageJson.version, encoding);
 
-      writeParam(out, '_node_version', encoding);
-      writeParam(out, process.versions.node, encoding);
+      writeAttribute(out, '_node_version', encoding);
+      writeAttribute(out, process.versions.node, encoding);
 
       if (opts.connectAttributes !== true) {
         let attrNames = Object.keys(this.opts.connectAttributes);
         for (let k = 0; k < attrNames.length; ++k) {
-          writeParam(out, attrNames[k], encoding);
-          writeParam(out, this.opts.connectAttributes[attrNames[k]], encoding);
+          writeAttribute(out, attrNames[k], encoding);
+          writeAttribute(out, this.opts.connectAttributes[attrNames[k]], encoding);
         }
       }
 
@@ -126,7 +129,7 @@ class ChangeUser extends Authentication {
       if (this.opts.collation === undefined) {
         this.opts.collation = Collations.fromName(cmdOpts.charset.toUpperCase());
         if (this.opts.collation !== undefined) {
-          console.log(
+          this.opts.logger.warning(
             "warning: please use option 'collation' " +
               "in replacement of 'charset' when using a collation name ('" +
               cmdOpts.charset +
@@ -147,7 +150,7 @@ class ChangeUser extends Authentication {
   }
 }
 
-function writeParam(out, val, encoding) {
+function writeAttribute(out, val, encoding) {
   let param = Buffer.isEncoding(encoding) ? Buffer.from(val, encoding) : Iconv.encode(val, encoding);
   out.writeLengthCoded(param.length);
   out.writeBuffer(param, 0, param.length);

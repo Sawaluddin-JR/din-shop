@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 const Parser = require('./parser');
 const Parse = require('../misc/parse');
@@ -18,6 +21,7 @@ class Prepare extends Parser {
     this.encoder = new BinaryEncoder(this.opts);
     this.binary = true;
     this.conn = conn;
+    this.executeCommand = cmdParam.executeCommand;
   }
 
   /**
@@ -66,8 +70,11 @@ class Prepare extends Parser {
     if (this.conn.prepareCache) {
       let cached = new PrepareCacheWrapper(prepare);
       this.conn.prepareCache.set(this.sql, cached);
-      return this.successEnd(cached.incrementUse());
+      const cachedWrappedPrepared = cached.incrementUse();
+      if (this.executeCommand) this.executeCommand.prepare = cachedWrappedPrepared;
+      return this.successEnd(cachedWrappedPrepared);
     }
+    if (this.executeCommand) this.executeCommand.prepare = prepare;
     return this.successEnd(prepare);
   }
 

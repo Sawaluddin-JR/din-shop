@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const FieldType = require('../../const/field-type');
@@ -6,7 +9,10 @@ const Errors = require('../../misc/errors');
 class BinaryDecoder {
   static newRow(packet, columns) {
     packet.skip(1); // skip 0x00 header.
-    return packet.readBuffer(Math.floor((columns.length + 9) / 8));
+    const len = Math.floor((columns.length + 9) / 8);
+    const nullBitMap = new Array(len);
+    for (let i = 0; i < len; i++) nullBitMap[i] = packet.readUInt8();
+    return nullBitMap;
   }
 
   static castWrapper(column, packet, opts, nullBitmap, index) {
@@ -60,41 +66,24 @@ class BinaryDecoder {
   static parser(col, opts) {
     // set reader function read(col, packet, index, nullBitmap, opts, throwUnexpectedError)
     // this permit for multi-row result-set to avoid resolving type parsing each data.
+
+    // return constant parser (function not depending on column info other than type)
+    const defaultParser = col.signed()
+      ? DEFAULT_SIGNED_PARSER_TYPE[col.columnType]
+      : DEFAULT_UNSIGNED_PARSER_TYPE[col.columnType];
+    if (defaultParser) return defaultParser;
+
+    // parser depending on column info
     switch (col.columnType) {
-      case FieldType.TINY:
-        return col.signed() ? readTinyBinarySigned : readTinyBinaryUnsigned;
-
-      case FieldType.YEAR:
-      case FieldType.SHORT:
-        return col.signed() ? readShortBinarySigned : readShortBinaryUnsigned;
-
-      case FieldType.INT24:
-        return col.signed() ? readMediumBinarySigned : readMediumBinaryUnsigned;
-
-      case FieldType.INT:
-        return col.signed() ? readIntBinarySigned : readIntBinaryUnsigned;
-
-      case FieldType.FLOAT:
-        return readFloatBinary;
-
-      case FieldType.DOUBLE:
-        return readDoubleBinary;
-
       case FieldType.BIGINT:
         if (col.signed()) {
           return opts.bigIntAsNumber || opts.supportBigNumbers ? readBigintAsIntBinarySigned : readBigintBinarySigned;
         }
         return opts.bigIntAsNumber || opts.supportBigNumbers ? readBigintAsIntBinaryUnsigned : readBigintBinaryUnsigned;
 
-      case FieldType.DATE:
-        return readDateBinary;
-
       case FieldType.DATETIME:
       case FieldType.TIMESTAMP:
         return opts.dateStrings ? readTimestampStringBinary.bind(null, col.scale) : readTimestampBinary;
-
-      case FieldType.TIME:
-        return readTimeBinary;
 
       case FieldType.DECIMAL:
       case FieldType.NEWDECIMAL:
@@ -103,10 +92,6 @@ class BinaryDecoder {
       case FieldType.GEOMETRY:
         let defaultVal = col.__getDefaultGeomVal();
         return readGeometryBinary.bind(null, defaultVal);
-
-      case FieldType.JSON:
-        //for mysql only => parse string as JSON object
-        return readJsonBinary;
 
       case FieldType.BIT:
         if (col.columnLength === 1 && opts.bitOneIsBoolean) {
@@ -128,6 +113,7 @@ class BinaryDecoder {
     }
   }
 }
+
 const isNullBitmap = (index, nullBitmap) => {
   return (nullBitmap[Math.floor((index + 2) / 8)] & (1 << (index + 2) % 8)) > 0;
 };
@@ -154,7 +140,7 @@ const readMediumBinaryUnsigned = (packet, opts, throwUnexpectedError, nullBitmap
   if (isNullBitmap(index, nullBitmap)) {
     return null;
   }
-  const result = packet.readInt24();
+  const result = packet.readUInt24();
   packet.skip(1); // MEDIUMINT is encoded on 4 bytes in exchanges !
   return result;
 };
@@ -241,7 +227,7 @@ const readDecimalAsIntBinary = (packet, opts, throwUnexpectedError, nullBitmap, 
       );
     }
     if (opts.supportBigNumbers && (opts.bigNumberStrings || !Number.isSafeInteger(Number(valDec)))) {
-      return valDec.toString();
+      return valDec;
     }
     return Number(valDec);
   }
@@ -251,10 +237,14 @@ const readDecimalBinary = (packet, opts, throwUnexpectedError, nullBitmap, index
   if (isNullBitmap(index, nullBitmap)) return null;
   const valDec = packet.readDecimalLengthEncoded();
   if (valDec != null && (opts.decimalAsNumber || opts.supportBigNumbers)) {
-    if (opts.supportBigNumbers && (opts.bigNumberStrings || !Number.isSafeInteger(Number(valDec)))) {
-      return valDec.toString();
+    const numberValue = Number(valDec);
+    if (
+      opts.supportBigNumbers &&
+      (opts.bigNumberStrings || (Number.isInteger(numberValue) && !Number.isSafeInteger(numberValue)))
+    ) {
+      return valDec;
     }
-    return Number(valDec);
+    return numberValue;
   }
   return valDec;
 };
@@ -271,3 +261,27 @@ const readBinarySet = (packet, opts, throwUnexpectedError, nullBitmap, index) =>
 };
 const readStringBinary = (packet, opts, throwUnexpectedError, nullBitmap, index) =>
   isNullBitmap(index, nullBitmap) ? null : packet.readStringLengthEncoded();
+
+const DEFAULT_SIGNED_PARSER_TYPE = Array(256);
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.TINY] = readTinyBinarySigned;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.YEAR] = readShortBinarySigned;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.SHORT] = readShortBinarySigned;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.INT24] = readMediumBinarySigned;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.INT] = readIntBinarySigned;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.FLOAT] = readFloatBinary;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.DOUBLE] = readDoubleBinary;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.DATE] = readDateBinary;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.TIME] = readTimeBinary;
+DEFAULT_SIGNED_PARSER_TYPE[FieldType.JSON] = readJsonBinary;
+
+const DEFAULT_UNSIGNED_PARSER_TYPE = Array(256);
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.TINY] = readTinyBinaryUnsigned;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.YEAR] = readShortBinaryUnsigned;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.SHORT] = readShortBinaryUnsigned;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.INT24] = readMediumBinaryUnsigned;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.INT] = readIntBinaryUnsigned;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.FLOAT] = readFloatBinary;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.DOUBLE] = readDoubleBinary;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.DATE] = readDateBinary;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.TIME] = readTimeBinary;
+DEFAULT_UNSIGNED_PARSER_TYPE[FieldType.JSON] = readJsonBinary;

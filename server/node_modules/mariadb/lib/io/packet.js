@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Errors = require('../misc/errors');
@@ -188,16 +191,28 @@ class Packet {
     return val;
   }
 
+  /**
+   * Metadata are length encoded, but cannot have length > 256, so simplified readUnsignedLength
+   * @returns {number}
+   */
+  readMetadataLength() {
+    const type = this.buf[this.pos++];
+    if (type < 0xfb) return type;
+    return this.readUInt16();
+  }
+
   readUnsignedLength() {
-    const type = this.buf[this.pos++] & 0xff;
+    const type = this.buf[this.pos++];
     if (type < 0xfb) return type;
     switch (type) {
       case 0xfb:
         return null;
       case 0xfc:
-        return this.readUInt16();
+        //readUInt16();
+        return this.buf[this.pos++] + this.buf[this.pos++] * 2 ** 8;
       case 0xfd:
-        return this.readUInt24();
+        //readUInt24();
+        return this.buf[this.pos++] + this.buf[this.pos++] * 2 ** 8 + this.buf[this.pos++] * 2 ** 16;
       case 0xfe:
         // limitation to BigInt signed value
         return Number(this.readBigInt64());
@@ -233,6 +248,7 @@ class Packet {
 
   readSignedLengthBigInt() {
     const type = this.buf[this.pos++];
+    if (type < 0xfb) return BigInt(type);
     switch (type) {
       // null test is not used for now, since only used for reading insertId
       // case 0xfb:
@@ -243,8 +259,6 @@ class Packet {
         return BigInt(this.readUInt24());
       case 0xfe:
         return this.readBigInt64();
-      default:
-        return BigInt(type);
     }
   }
 
@@ -260,18 +274,19 @@ class Packet {
   }
 
   readBigIntLengthEncoded() {
-    const len = this.readUnsignedLength();
-    if (len === null) return null;
-    return this.readBigIntFromLen(len);
-  }
+    const len = this.buf[this.pos++];
 
-  readBigIntFromLen(len) {
-    // fast-path: if length encoded is < to 16, value is in safe integer range
-    // atoi
+    // fast-path: if length encoded is < to 16, value is in safe integer range, using atoi
     if (len < 16) {
       return BigInt(this._atoi(len));
     }
 
+    if (len === 0xfb) return null;
+
+    return this.readBigIntFromLen(len);
+  }
+
+  readBigIntFromLen(len) {
     // atoll
     let result = 0n;
     let negate = false;
@@ -290,16 +305,15 @@ class Packet {
   }
 
   readDecimalLengthEncoded() {
-    const len = this.readUnsignedLength();
-    if (len === null) return null;
+    const len = this.buf[this.pos++];
+    if (len === 0xfb) return null;
     this.pos += len;
     return this.buf.toString('ascii', this.pos - len, this.pos);
   }
 
   readDate() {
-    const len = this.readUnsignedLength();
-    if (len === null) return null;
-
+    const len = this.buf[this.pos++];
+    if (len === 0xfb) return null;
     let res = [];
     let value = 0;
     let initPos = this.pos;
@@ -345,8 +359,8 @@ class Packet {
   }
 
   readDateTime() {
-    const len = this.readUnsignedLength();
-    if (len === null) return null;
+    const len = this.buf[this.pos++];
+    if (len === 0xfb) return null;
     this.pos += len;
     const str = this.buf.toString('ascii', this.pos - len, this.pos);
     if (str.startsWith('0000-00-00 00:00:00')) return null;
@@ -435,20 +449,27 @@ class Packet {
           ? '.' + appendZero(microSec, 6).substring(0, scale)
           : '.' + appendZero(microSec, 6)
         : scale > 0
-        ? '.' + appendZero(microSec, 6).substring(0, scale)
-        : '')
+          ? '.' + appendZero(microSec, 6).substring(0, scale)
+          : '')
     );
   }
 
   readBinaryTime() {
     const len = this.buf[this.pos++];
-    const negate = this.buf[this.pos++] === 1;
-    const hour = this.readUInt32() * 24 + this.readUInt8();
-    const min = this.readUInt8();
-    const sec = this.readUInt8();
+    let negate = false;
+    let hour = 0;
+    let min = 0;
+    let sec = 0;
     let microSec = 0;
-    if (len > 8) {
-      microSec = this.readUInt32();
+
+    if (len > 0) {
+      negate = this.buf[this.pos++] === 1;
+      hour = this.readUInt32() * 24 + this.readUInt8();
+      min = this.readUInt8();
+      sec = this.readUInt8();
+      if (len > 8) {
+        microSec = this.readUInt32();
+      }
     }
     let val = appendZero(hour, 2) + ':' + appendZero(min, 2) + ':' + appendZero(sec, 2);
     if (microSec > 0) {
@@ -471,19 +492,9 @@ class Packet {
   }
 
   readIntLengthEncoded() {
-    const len = this.buf[this.pos++] & 0xff;
-    if (len < 0xfb) return this._atoi(len);
-    switch (len) {
-      case 0xfb:
-        return null;
-      case 0xfc:
-        return this._atoi(this.readUInt16());
-      case 0xfd:
-        return this._atoi(this.readUInt24());
-      case 0xfe:
-        // limitation to BigInt signed value
-        return this._atoi(Number(this.readBigInt64()));
-    }
+    const len = this.buf[this.pos++];
+    if (len === 0xfb) return null;
+    return this._atoi(len);
   }
 
   _atoi(len) {
@@ -511,20 +522,16 @@ class Packet {
   }
 
   skipLengthCodedNumber() {
-    const type = this.buf[this.pos++] & 0xff;
+    const type = this.buf[this.pos++];
     switch (type) {
       case 251:
         return;
       case 252:
-        this.pos += 2 + (0xffff & ((this.buf[this.pos] & 0xff) + ((this.buf[this.pos + 1] & 0xff) << 8)));
+        this.pos += 2 + (0xffff & (this.buf[this.pos] + (this.buf[this.pos + 1] << 8)));
         return;
       case 253:
         this.pos +=
-          3 +
-          (0xffffff &
-            ((this.buf[this.pos] & 0xff) +
-              ((this.buf[this.pos + 1] & 0xff) << 8) +
-              ((this.buf[this.pos + 2] & 0xff) << 16)));
+          3 + (0xffffff & (this.buf[this.pos] + (this.buf[this.pos + 1] << 8) + (this.buf[this.pos + 2] << 16)));
         return;
       case 254:
         this.pos += 8 + Number(this.buf.readBigUInt64LE(this.pos));
@@ -539,10 +546,7 @@ class Packet {
     return this.end - this.pos;
   }
 
-  subPacketLengthEncoded(len) {
-    this.skip(len);
-    return new Packet().update(this.buf, this.pos - len, this.pos);
-  }
+  subPacketLengthEncoded(len) {}
 
   /**
    * Parse ERR_Packet : https://mariadb.com/kb/en/library/err_packet/

@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Parser = require('./parser');
@@ -14,7 +17,7 @@ const QUOTE = 0x27;
 class Query extends Parser {
   constructor(resolve, reject, connOpts, cmdParam) {
     super(resolve, reject, connOpts, cmdParam);
-    this.encoder = new TextEncoder(this.opts);
+    this.writeParam = TextEncoder.writeParam;
     this.binary = false;
   }
 
@@ -26,7 +29,7 @@ class Query extends Parser {
    * @param info  connection information
    */
   start(out, opts, info) {
-    if (opts.logger.query) opts.logger.query(`QUERY: ${opts.logger.logParam ? this.displaySql() : this.sql}`);
+    if (opts.logger.query) opts.logger.query(`QUERY: ${opts.logParam ? this.displaySql() : this.sql}`);
     this.onPacketReceive = this.readResponsePacket;
     if (this.initialValues === undefined) {
       //shortcut if no parameters
@@ -47,7 +50,7 @@ class Query extends Parser {
           this.encodedSql,
           info,
           this.initialValues,
-          this.displaySql.bind(this)
+          this.opts.logParam ? this.displaySql.bind(this) : () => this.sql
         );
         this.paramPositions = parsed.paramPositions;
         this.values = parsed.values;
@@ -106,7 +109,7 @@ class Query extends Parser {
         //********************************************
         // param isn't stream. directly write in buffer
         //********************************************
-        this.encoder.writeParam(out, value, this.opts, info);
+        this.writeParam(out, value, this.opts, info);
       }
     }
     out.writeBuffer(this.encodedSql, this.sqlPos, this.encodedSql.length - this.sqlPos);
@@ -127,29 +130,21 @@ class Query extends Parser {
           out.writeString(`SET STATEMENT max_statement_time=${this.opts.timeout / 1000} FOR `);
           return true;
         } else {
-          const err = Errors.createError(
+          this.sendCancelled(
             `Cannot use timeout for xpand/MariaDB server before 10.1.2. timeout value: ${this.opts.timeout}`,
             Errors.ER_TIMEOUT_NOT_SUPPORTED,
-            info,
-            'HY000',
-            this.sql
+            info
           );
-          this.emit('send_end');
-          this.throwError(err, info);
           return false;
         }
       } else {
         //not available for MySQL
         // max_execution time exist, but only for select, and as hint
-        const err = Errors.createError(
+        this.sendCancelled(
           `Cannot use timeout for MySQL server. timeout value: ${this.opts.timeout}`,
           Errors.ER_TIMEOUT_NOT_SUPPORTED,
-          info,
-          'HY000',
-          this.sql
+          info
         );
-        this.emit('send_end');
-        this.throwError(err, info);
         return false;
       }
     }
@@ -165,13 +160,10 @@ class Query extends Parser {
   validateParameters(info) {
     //validate parameter size.
     if (this.paramPositions.length / 2 > this.values.length) {
-      this.emit('send_end');
-      this.throwNewError(
+      this.sendCancelled(
         `Parameter at position ${this.values.length + 1} is not set`,
-        false,
-        info,
-        'HY000',
-        Errors.ER_MISSING_PARAMETER
+        Errors.ER_MISSING_PARAMETER,
+        info
       );
       return false;
     }
@@ -219,7 +211,7 @@ class Query extends Parser {
         //********************************************
         // param isn't stream. directly write in buffer
         //********************************************
-        this.encoder.writeParam(out, value, this.opts, info);
+        this.writeParam(out, value, this.opts, info);
       }
     }
   }

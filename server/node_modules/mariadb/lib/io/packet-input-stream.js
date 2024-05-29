@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const PacketNodeEncoded = require('./packet-node-encoded');
@@ -44,9 +47,9 @@ class PacketInputStream {
 
   receivePacketDebug(packet) {
     let cmd = this.currentCmd();
-    this.header[0] = this.packetLen & 0xff;
-    this.header[1] = (this.packetLen >> 8) & 0xff;
-    this.header[2] = (this.packetLen >> 16) & 0xff;
+    this.header[0] = this.packetLen;
+    this.header[1] = this.packetLen >> 8;
+    this.header[2] = this.packetLen >> 16;
     this.header[3] = this.sequenceNo;
     if (packet) {
       this.opts.logger.network(

@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Parser = require('./parser');
@@ -13,7 +16,7 @@ const OkPacket = require('./class/ok-packet');
 class BatchBulk extends Parser {
   constructor(resolve, reject, connOpts, prepare, cmdParam) {
     super(resolve, reject, connOpts, cmdParam);
-    this.encoder = new BinaryEncoder(this.opts);
+    this.writeParam = BinaryEncoder.writeParam;
     this.cmdOpts = cmdParam.opts;
     this.binary = true;
     this.prepare = prepare;
@@ -34,16 +37,7 @@ class BatchBulk extends Parser {
     if (this.cmdOpts && this.cmdOpts.timeout) {
       this.bulkPacketNo = 1;
       this.sending = false;
-      const err = Errors.createError(
-        'Cannot use timeout for Batch statement',
-        Errors.ER_TIMEOUT_NOT_SUPPORTED,
-        info,
-        'HY000',
-        this.sql
-      );
-      this.emit('send_end');
-      this.throwError(err, info);
-      return;
+      return this.sendCancelled('Cannot use timeout for Batch statement', Errors.ER_TIMEOUT_NOT_SUPPORTED);
     }
     this.onPacketReceive = this.readResponsePacket;
     if (this.opts.namedPlaceholders && this.prepare._placeHolderIndex) {
@@ -219,7 +213,7 @@ class BatchBulk extends Parser {
    */
   sendComStmtBulkExecute(out, opts, info) {
     if (opts.logger.query)
-      opts.logger.query(`BULK: (${this.prepare.id}) sql: ${opts.logger.logParam ? this.displaySql() : this.sql}`);
+      opts.logger.query(`BULK: (${this.prepare.id}) sql: ${opts.logParam ? this.displaySql() : this.sql}`);
     const parameterCount = this.prepare.parameterCount;
     this.rowIdx = 0;
     this.vals = this.values[this.rowIdx++];
@@ -229,9 +223,9 @@ class BatchBulk extends Parser {
     this.sending = true;
 
     /**
-     * Implementation After writing bunch of parameter to buffer is marked. then : - when writing
+     * Implementation After writing a bunch of parameter to buffer is marked. then : - when writing
      * next bunch of parameter, if buffer grow more than max_allowed_packet, send buffer up to mark,
-     * then create a new packet with current bunch of data - if bunch of parameter data type changes
+     * then create a new packet with current bunch of data - if a bunch of parameter data type changes
      * send buffer up to mark, then create a new packet with new data type.
      *
      * <p>Problem remains if a bunch of parameter is bigger than max_allowed_packet
@@ -256,7 +250,7 @@ class BatchBulk extends Parser {
         out.writeBuffer(lastCmdData, 0, lastCmdData.length);
         out.mark();
         lastCmdData = null;
-        if (!this.rowIdx >= this.values.length) {
+        if (this.rowIdx >= this.values.length) {
           break;
         }
         this.vals = this.values[this.rowIdx++];
@@ -288,11 +282,11 @@ class BatchBulk extends Parser {
                   Buffer.from([0, 0, 0, 0]), // SRID
                   geoBuff // WKB
                 ]);
-                this.encoder.writeParam(out, param, this.opts, info);
+                this.writeParam(out, param, this.opts, info);
               }
             } else {
               out.writeInt8(0x00); // value follow
-              this.encoder.writeParam(out, param, this.opts, info);
+              this.writeParam(out, param, this.opts, info);
             }
           } else {
             out.writeInt8(0x01); // value is null
@@ -355,15 +349,13 @@ class BatchBulk extends Parser {
       return this.sql.substring(0, this.opts.debugLen) + '...';
     }
 
-    let sqlMsg = this.sql + ' - parameters:';
-    sqlMsg += '[';
+    let sqlMsg = this.sql + ' - parameters:[';
     for (let i = 0; i < this.initialValues.length; i++) {
       if (i !== 0) sqlMsg += ',';
       let param = this.initialValues[i];
-      sqlMsg = this.logParameters(sqlMsg, param);
+      sqlMsg = Parser.logParameters(this.opts, sqlMsg, param);
       if (sqlMsg.length > this.opts.debugLen) {
-        sqlMsg = sqlMsg.substring(0, this.opts.debugLen) + '...';
-        break;
+        return sqlMsg.substring(0, this.opts.debugLen) + '...';
       }
     }
     sqlMsg += ']';
@@ -454,8 +446,17 @@ class BatchBulk extends Parser {
       if (err.fatal) {
         this.bulkPacketNo = 0;
       }
-      if (this.stack) {
-        err = Errors.createError(err.message, err.errno, info, err.sqlState, this.sql, err.fatal, this.stack, false);
+      if (this.cmdParam.stack) {
+        err = Errors.createError(
+          err.message,
+          err.errno,
+          info,
+          err.sqlState,
+          this.sql,
+          err.fatal,
+          this.cmdParam.stack,
+          false
+        );
       }
       this.firstError = err;
     }
@@ -489,9 +490,9 @@ class BatchBulk extends Parser {
       if (this.values[r].length < nbParameter) {
         this.emit('send_end');
         this.throwNewError(
-          `Expect ${nbParameter} parameters, but at index ${r}, parameters only contains ${
-            this.values[r].length
-          }\n ${this.displaySql()}`,
+          `Expect ${nbParameter} parameters, but at index ${r}, parameters only contains ${this.values[r].length}\n ${
+            this.opts.logParam ? this.displaySql() : this.sql
+          }`,
           false,
           info,
           'HY000',

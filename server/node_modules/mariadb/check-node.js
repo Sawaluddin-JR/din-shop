@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const hasMinVersion = function (nodeVersionStr, connectorRequirement) {
@@ -13,10 +16,7 @@ const hasMinVersion = function (nodeVersionStr, connectorRequirement) {
 
   const minorNode = Number(versNode[1]);
   const minorReq = Number(versReq[1]);
-  if (minorNode > minorReq) return true;
-  if (minorNode < minorReq) return false;
-
-  return true;
+  return minorNode >= minorReq;
 };
 
 module.exports.hasMinVersion = hasMinVersion;

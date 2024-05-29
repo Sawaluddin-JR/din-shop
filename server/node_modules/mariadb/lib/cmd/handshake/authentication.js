@@ -1,9 +1,17 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Command = require('../command');
 const Errors = require('../../misc/errors');
 const Capabilities = require('../../const/capabilities');
 const Handshake = require('./auth/handshake');
+const ServerStatus = require('../../const/server-status');
+const StateChange = require('../../const/state-change');
+const Collations = require('../../const/collations');
+const Crypto = require('crypto');
+const utils = require('../../misc/utils');
 const authenticationPlugins = {
   mysql_native_password: require('./auth/native-password-auth.js'),
   mysql_clear_password: require('./auth/clear-password-auth'),
@@ -63,14 +71,95 @@ class Authentication extends Command {
         packet.skipLengthCodedNumber(); //skip affected rows
         packet.skipLengthCodedNumber(); //skip last insert id
         info.status = packet.readUInt16();
-        return this.successEnd();
+
+        if (info.requireValidCert && info.selfSignedCertificate) {
+          // TLS was forced to trust, and certificate validation is required
+          packet.skip(2); //skip warning count
+          if (packet.remaining()) {
+            const validationHash = packet.readBufferLengthEncoded();
+            if (validationHash.length > 0) {
+              if (!this.plugin.permitHash() || !this.cmdParam.opts.password || this.cmdParam.opts.password === '') {
+                return this.throwNewError(
+                  'Self signed certificates. Either set `ssl: { rejectUnauthorized: false }` (trust mode) or provide server certificate to client',
+                  true,
+                  info,
+                  '08000',
+                  Errors.ER_SELF_SIGNED_NO_PWD
+                );
+              }
+              if (this.validateFingerPrint(validationHash, info)) {
+                return this.successEnd();
+              }
+            }
+          }
+          return this.throwNewError('self-signed certificate', true, info, '08000', Errors.ER_SELF_SIGNED);
+        }
+
+        let mustRedirect = false;
+        if (info.status & ServerStatus.SESSION_STATE_CHANGED) {
+          packet.skip(2); //skip warning count
+          packet.skipLengthCodedNumber();
+          while (packet.remaining()) {
+            const len = packet.readUnsignedLength();
+            if (len > 0) {
+              const subPacket = packet.subPacketLengthEncoded(len);
+              while (subPacket.remaining()) {
+                const type = subPacket.readUInt8();
+                switch (type) {
+                  case StateChange.SESSION_TRACK_SYSTEM_VARIABLES:
+                    let subSubPacket;
+                    do {
+                      subSubPacket = subPacket.subPacketLengthEncoded(subPacket.readUnsignedLength());
+                      const variable = subSubPacket.readStringLengthEncoded();
+                      const value = subSubPacket.readStringLengthEncoded();
+
+                      switch (variable) {
+                        case 'character_set_client':
+                          info.collation = Collations.fromCharset(value);
+                          if (info.collation === undefined) {
+                            this.throwError(new Error("unknown charset : '" + value + "'"), info);
+                            return;
+                          }
+                          opts.emit('collation', info.collation);
+                          break;
+
+                        case 'redirect_url':
+                          mustRedirect = true;
+                          info.redirect(value, this.successEnd);
+                          break;
+
+                        case 'maxscale':
+                          info.maxscaleVersion = value;
+                          break;
+
+                        case 'connection_id':
+                          info.threadId = parseInt(value);
+                          break;
+
+                        default:
+                        //variable not used by driver
+                      }
+                    } while (subSubPacket.remaining() > 0);
+                    break;
+
+                  case StateChange.SESSION_TRACK_SCHEMA:
+                    const subSubPacket2 = subPacket.subPacketLengthEncoded(subPacket.readUnsignedLength());
+                    info.database = subSubPacket2.readStringLengthEncoded();
+                    break;
+                }
+              }
+            }
+          }
+        }
+        if (!mustRedirect) this.successEnd();
+        return;
 
       //*********************************************************************************************************
       //* ERR_Packet
       //*********************************************************************************************************
       case 0xff:
         this.plugin.onPacketReceive = null;
-        const authErr = packet.readError(info, this.displaySql());
+        const authErr = packet.readError(info, this.displaySql(), undefined);
         authErr.fatal = true;
         return this.plugin.throwError(authErr, info);
 
@@ -86,6 +175,29 @@ class Authentication extends Command {
           Errors.ER_AUTHENTICATION_BAD_PACKET
         );
     }
+  }
+
+  validateFingerPrint(validationHash, info) {
+    if (validationHash.length === 0 || !info.tlsFingerprint) return false;
+
+    // 0x01 = SHA256 encryption
+    if (validationHash[0] !== 0x01) {
+      const err = Errors.createFatalError(
+        `Unexpected hash format for fingerprint hash encoding`,
+        Errors.ER_UNEXPECTED_PACKET,
+        this.info
+      );
+      if (this.opts.logger.error) this.opts.logger.error(err);
+      return false;
+    }
+
+    const pwdHash = this.plugin.hash(this.cmdParam.opts);
+
+    let hash = Crypto.createHash('sha256');
+    let digest = hash.update(pwdHash).update(info.seed).update(Buffer.from(info.tlsFingerprint, 'hex')).digest();
+    const hashHex = utils.toHexString(digest);
+    const serverValidationHex = validationHash.toString('ascii', 1, validationHash.length).toLowerCase();
+    return hashHex === serverValidationHex;
   }
 
   /**
@@ -107,7 +219,7 @@ class Authentication extends Command {
       } else {
         //OldAuthSwitchRequest
         pluginName = 'mysql_old_password';
-        pluginData = info.seed.slice(0, 8);
+        pluginData = info.seed.subarray(0, 8);
       }
     } else {
       pluginName = packet.readStringNullEnded('ascii');
@@ -142,7 +254,6 @@ class Authentication extends Command {
       this.plugin.start(out, opts, info);
     } catch (err) {
       this.reject(err);
-      return;
     }
   }
 

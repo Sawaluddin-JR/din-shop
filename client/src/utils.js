@@ -9,7 +9,6 @@ async function send(endpoint, method, body) {
   });
   return response;
 }
-
 export const api = {
   get: (endpoint) => send(endpoint, "GET"),
   post: (endpoint, body) => send(endpoint, "POST", body),

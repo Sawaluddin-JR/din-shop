@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const { EventEmitter } = require('events');
@@ -150,7 +153,7 @@ class PoolPromise extends EventEmitter {
         Errors.createError(
           'SQL file parameter is mandatory',
           Errors.ER_MISSING_SQL_PARAMETER,
-          conn.info,
+          null,
           'HY000',
           null,
           false,

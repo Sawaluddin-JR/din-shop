@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 const Errors = require('../misc/errors');
 
 const State = {
@@ -411,7 +414,8 @@ module.exports.validateFileName = function (sql, parameters, fileName) {
 };
 
 /**
- * Parse commands from buffer
+ * Parse commands from buffer, returns queries separated by ';'
+ * (last one is not parsed)
  *
  * @param bufState buffer
  * @returns {*[]} array of queries contained in buffer

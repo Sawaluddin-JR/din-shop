@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const Command = require('./command');
@@ -52,7 +55,11 @@ class Parser extends Command {
       //* ERROR response
       //*********************************************************************************************************
       case 0xff:
-        const err = packet.readError(info, this.displaySql(), this.stack);
+        // in case of timeout, free accumulated rows
+        this._columns = null;
+        this._rows = [];
+
+        const err = packet.readError(info, opts.logParam ? this.displaySql() : this.sql, this.cmdParam.stack);
         //force in transaction status, since query will have created a transaction if autocommit is off
         //goal is to avoid unnecessary COMMIT/ROLLBACK.
         info.status |= ServerStatus.STATUS_IN_TRANS;
@@ -132,7 +139,7 @@ class Parser extends Command {
     }
 
     const okPacket = new OkPacket(affectedRows, insertId, packet.readUInt16());
-
+    let mustRedirect = false;
     if (info.status & ServerStatus.SESSION_STATE_CHANGED) {
       packet.skipLengthCodedNumber();
       while (packet.remaining()) {
@@ -143,23 +150,35 @@ class Parser extends Command {
             const type = subPacket.readUInt8();
             switch (type) {
               case StateChange.SESSION_TRACK_SYSTEM_VARIABLES:
-                const subSubPacket = subPacket.subPacketLengthEncoded(subPacket.readUnsignedLength());
-                const variable = subSubPacket.readStringLengthEncoded();
-                const value = subSubPacket.readStringLengthEncoded();
+                let subSubPacket;
+                do {
+                  subSubPacket = subPacket.subPacketLengthEncoded(subPacket.readUnsignedLength());
+                  const variable = subSubPacket.readStringLengthEncoded();
+                  const value = subSubPacket.readStringLengthEncoded();
 
-                switch (variable) {
-                  case 'character_set_client':
-                    info.collation = Collations.fromCharset(value);
-                    if (info.collation === undefined) {
-                      this.throwError(new Error("unknown charset : '" + value + "'"), info);
-                      return;
-                    }
-                    opts.emit('collation', info.collation);
-                    break;
+                  switch (variable) {
+                    case 'character_set_client':
+                      info.collation = Collations.fromCharset(value);
+                      if (info.collation === undefined) {
+                        this.throwError(new Error("unknown charset : '" + value + "'"), info);
+                        return;
+                      }
+                      opts.emit('collation', info.collation);
+                      break;
 
-                  default:
-                  //variable not used by driver
-                }
+                    case 'redirect_url':
+                      mustRedirect = true;
+                      info.redirect(value, this.okPacketSuccess.bind(this, okPacket, info));
+                      break;
+
+                    case 'connection_id':
+                      info.threadId = parseInt(value);
+                      break;
+
+                    default:
+                    //variable not used by driver
+                  }
+                } while (subSubPacket.remaining() > 0);
                 break;
 
               case StateChange.SESSION_TRACK_SCHEMA:
@@ -171,7 +190,20 @@ class Parser extends Command {
         }
       }
     }
+    if (!mustRedirect) {
+      if (
+        info.redirectRequest &&
+        (info.status & ServerStatus.STATUS_IN_TRANS) === 0 &&
+        (info.status & ServerStatus.MORE_RESULTS_EXISTS) === 0
+      ) {
+        info.redirect(info.redirectRequest, this.okPacketSuccess.bind(this, okPacket, info));
+      } else {
+        this.okPacketSuccess(okPacket, info);
+      }
+    }
+  }
 
+  okPacketSuccess(okPacket, info) {
     if (this._responseIndex === 0) {
       // fast path for standard single result
       if (info.status & ServerStatus.MORE_RESULTS_EXISTS) {
@@ -203,7 +235,7 @@ class Parser extends Command {
   success(val) {
     this.successEnd(val);
     this._columns = null;
-    this._rows = null;
+    this._rows = [];
   }
 
   /**
@@ -234,15 +266,15 @@ class Parser extends Command {
   }
 
   setParser() {
-    this._parseFonction = new Array(this._columnCount);
+    this._parseFunction = new Array(this._columnCount);
     if (this.opts.typeCast) {
       for (let i = 0; i < this._columnCount; i++) {
-        this._parseFonction[i] = this.readCastValue.bind(this, this._columns[i]);
+        this._parseFunction[i] = this.readCastValue.bind(this, this._columns[i]);
       }
     } else {
       const dataParser = this.binary ? BinaryDecoder.parser : TextDecoder.parser;
       for (let i = 0; i < this._columnCount; i++) {
-        this._parseFonction[i] = dataParser(this._columns[i], this.opts);
+        this._parseFunction[i] = dataParser(this._columns[i], this.opts);
       }
     }
 
@@ -356,7 +388,10 @@ class Parser extends Command {
         //force in transaction status, since query will have created a transaction if autocommit is off
         //goal is to avoid unnecessary COMMIT/ROLLBACK.
         info.status |= ServerStatus.STATUS_IN_TRANS;
-        return this.throwError(packet.readError(info, this.displaySql(), this.stack), info);
+        return this.throwError(
+          packet.readError(info, this.opts.logParam ? this.displaySql() : this.sql, this.cmdParam.err),
+          info
+        );
       }
 
       if ((!info.eofDeprecated && packet.length() < 13) || (info.eofDeprecated && packet.length() < 0xffffff)) {
@@ -370,52 +405,63 @@ class Parser extends Command {
           info.status = packet.readUInt16();
         }
 
-        if (this.opts.metaAsArray) {
-          //return promise object as array :
-          // example for SELECT 1 =>
-          // [
-          //   [ {"1": 1} ],      //rows
-          //   [ColumnDefinition] //meta
-          // ]
-
-          if (info.status & ServerStatus.MORE_RESULTS_EXISTS || this.isOutParameter) {
-            if (!this._meta) this._meta = [];
-            this._meta[this._responseIndex] = this._columns;
-            this._responseIndex++;
-            return (this.onPacketReceive = this.readResponsePacket);
-          }
-          if (this._responseIndex === 0) {
-            this.success([this._rows[0], this._columns]);
-          } else {
-            if (!this._meta) this._meta = [];
-            this._meta[this._responseIndex] = this._columns;
-            this.success([this._rows, this._meta]);
-          }
+        if (
+          info.redirectRequest &&
+          (info.status & ServerStatus.STATUS_IN_TRANS) === 0 &&
+          (info.status & ServerStatus.MORE_RESULTS_EXISTS) === 0
+        ) {
+          info.redirect(info.redirectRequest, this.resultSetEndingPacketResult.bind(this, info));
         } else {
-          //return promise object as rows that have meta property :
-          // example for SELECT 1 =>
-          // [
-          //   {"1": 1},
-          //   meta: [ColumnDefinition]
-          // ]
-          Object.defineProperty(this._rows[this._responseIndex], 'meta', {
-            value: this._columns,
-            writable: true,
-            enumerable: this.opts.metaEnumerable
-          });
-
-          if (info.status & ServerStatus.MORE_RESULTS_EXISTS || this.isOutParameter) {
-            this._responseIndex++;
-            return (this.onPacketReceive = this.readResponsePacket);
-          }
-          this.success(this._responseIndex === 0 ? this._rows[0] : this._rows);
+          this.resultSetEndingPacketResult(info);
         }
-
         return;
       }
     }
 
     this.handleNewRows(this.parseRow(packet));
+  }
+
+  resultSetEndingPacketResult(info) {
+    if (this.opts.metaAsArray) {
+      //return promise object as array :
+      // example for SELECT 1 =>
+      // [
+      //   [ {"1": 1} ],      //rows
+      //   [ColumnDefinition] //meta
+      // ]
+
+      if (info.status & ServerStatus.MORE_RESULTS_EXISTS || this.isOutParameter) {
+        if (!this._meta) this._meta = [];
+        this._meta[this._responseIndex] = this._columns;
+        this._responseIndex++;
+        return (this.onPacketReceive = this.readResponsePacket);
+      }
+      if (this._responseIndex === 0) {
+        this.success([this._rows[0], this._columns]);
+      } else {
+        if (!this._meta) this._meta = [];
+        this._meta[this._responseIndex] = this._columns;
+        this.success([this._rows, this._meta]);
+      }
+    } else {
+      //return promise object as rows that have meta property :
+      // example for SELECT 1 =>
+      // [
+      //   {"1": 1},
+      //   meta: [ColumnDefinition]
+      // ]
+      Object.defineProperty(this._rows[this._responseIndex], 'meta', {
+        value: this._columns,
+        writable: true,
+        enumerable: this.opts.metaEnumerable
+      });
+
+      if (info.status & ServerStatus.MORE_RESULTS_EXISTS || this.isOutParameter) {
+        this._responseIndex++;
+        return (this.onPacketReceive = this.readResponsePacket);
+      }
+      this.success(this._responseIndex === 0 ? this._rows[0] : this._rows);
+    }
   }
 
   /**
@@ -430,13 +476,16 @@ class Parser extends Command {
       }
 
       let sqlMsg = this.sql + ' - parameters:';
-      return this.logParameters(sqlMsg, this.initialValues);
+      return Parser.logParameters(this.opts, sqlMsg, this.initialValues);
+    }
+    if (this.sql.length > this.opts.debugLen) {
+      return this.sql.substring(0, this.opts.debugLen) + '... - parameters:[]';
     }
     return this.sql + ' - parameters:[]';
   }
 
-  logParameters(sqlMsg, values) {
-    if (this.opts.namedPlaceholders) {
+  static logParameters(opts, sqlMsg, values) {
+    if (opts.namedPlaceholders) {
       sqlMsg += '{';
       let first = true;
       for (let key in values) {
@@ -448,9 +497,8 @@ class Parser extends Command {
         sqlMsg += "'" + key + "':";
         let param = values[key];
         sqlMsg = Parser.logParam(sqlMsg, param);
-        if (sqlMsg.length > this.opts.debugLen) {
-          sqlMsg = sqlMsg.substring(0, this.opts.debugLen) + '...';
-          break;
+        if (sqlMsg.length > opts.debugLen) {
+          return sqlMsg.substring(0, opts.debugLen) + '...';
         }
       }
       sqlMsg += '}';
@@ -461,15 +509,14 @@ class Parser extends Command {
           if (i !== 0) sqlMsg += ',';
           let param = values[i];
           sqlMsg = Parser.logParam(sqlMsg, param);
-          if (sqlMsg.length > this.opts.debugLen) {
-            sqlMsg = sqlMsg.substring(0, this.opts.debugLen) + '...';
-            break;
+          if (sqlMsg.length > opts.debugLen) {
+            return sqlMsg.substring(0, opts.debugLen) + '...';
           }
         }
       } else {
         sqlMsg = Parser.logParam(sqlMsg, values);
-        if (sqlMsg.length > this.opts.debugLen) {
-          sqlMsg = sqlMsg.substring(0, this.opts.debugLen) + '...';
+        if (sqlMsg.length > opts.debugLen) {
+          return sqlMsg.substring(0, opts.debugLen) + '...';
         }
       }
       sqlMsg += ']';
@@ -481,7 +528,7 @@ class Parser extends Command {
     const row = new Array(this._columnCount);
     const nullBitMap = this.binary ? BinaryDecoder.newRow(packet, this._columns) : null;
     for (let i = 0; i < this._columnCount; i++) {
-      row[i] = this._parseFonction[i](packet, this.opts, this.unexpectedError, nullBitMap, i);
+      row[i] = this._parseFunction[i](packet, this.opts, this.unexpectedError, nullBitMap, i);
     }
     return row;
   }
@@ -491,7 +538,7 @@ class Parser extends Command {
     const nullBitMap = this.binary ? BinaryDecoder.newRow(packet, this._columns) : null;
     for (let i = 0; i < this._columnCount; i++) {
       if (!row[this.tableHeader[i][0]]) row[this.tableHeader[i][0]] = {};
-      row[this.tableHeader[i][0]][this.tableHeader[i][1]] = this._parseFonction[i](
+      row[this.tableHeader[i][0]][this.tableHeader[i][1]] = this._parseFunction[i](
         packet,
         this.opts,
         this.unexpectedError,
@@ -505,7 +552,7 @@ class Parser extends Command {
   parseRowStdText(packet) {
     const row = {};
     for (let i = 0; i < this._columnCount; i++) {
-      row[this.tableHeader[i]] = this._parseFonction[i](packet, this.opts, this.unexpectedError);
+      row[this.tableHeader[i]] = this._parseFunction[i](packet, this.opts, this.unexpectedError);
     }
     return row;
   }
@@ -514,7 +561,7 @@ class Parser extends Command {
     const nullBitMap = BinaryDecoder.newRow(packet, this._columns);
     const row = {};
     for (let i = 0; i < this._columnCount; i++) {
-      row[this.tableHeader[i]] = this._parseFonction[i](packet, this.opts, this.unexpectedError, nullBitMap, i);
+      row[this.tableHeader[i]] = this._parseFunction[i](packet, this.opts, this.unexpectedError, nullBitMap, i);
     }
     return row;
   }
@@ -548,7 +595,6 @@ class Parser extends Command {
         'HY000',
         this.sql
       );
-
       process.nextTick(this.reject, error);
       this.reject = null;
       this.resolve = null;
@@ -557,20 +603,41 @@ class Parser extends Command {
 
     // this.sequenceNo = 2;
     // this.compressSequenceNo = 2;
-    const stream = fs.createReadStream(fileName);
-    stream.on('error', (err) => {
+    let stream;
+    try {
+      stream = this.opts.infileStreamFactory ? this.opts.infileStreamFactory(fileName) : fs.createReadStream(fileName);
+    } catch (e) {
       out.writeEmptyPacket();
       const error = Errors.createError(
-        `LOCAL INFILE command failed: ${err.message}`,
+        `LOCAL INFILE infileStreamFactory failed`,
         Errors.ER_LOCAL_INFILE_NOT_READABLE,
         info,
         '22000',
-        this.sql
+        this.opts.logParam ? this.displaySql() : this.sql
       );
+      error.cause = e;
       process.nextTick(this.reject, error);
       this.reject = null;
       this.resolve = null;
-    });
+      return (this.onPacketReceive = this.readResponsePacket);
+    }
+
+    stream.on(
+      'error',
+      function (err) {
+        out.writeEmptyPacket();
+        const error = Errors.createError(
+          `LOCAL INFILE command failed: ${err.message}`,
+          Errors.ER_LOCAL_INFILE_NOT_READABLE,
+          info,
+          '22000',
+          this.sql
+        );
+        process.nextTick(this.reject, error);
+        this.reject = null;
+        this.resolve = null;
+      }.bind(this)
+    );
     stream.on('data', (chunk) => {
       out.writeBuffer(chunk, 0, chunk.length);
     });

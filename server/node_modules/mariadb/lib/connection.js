@@ -1,3 +1,6 @@
+//  SPDX-License-Identifier: LGPL-2.1-or-later
+//  Copyright (c) 2015-2024 MariaDB Corporation Ab
+
 'use strict';
 
 const EventEmitter = require('events');
@@ -13,6 +16,7 @@ const tls = require('tls');
 const Errors = require('./misc/errors');
 const Utils = require('./misc/utils');
 const Capabilities = require('./const/capabilities');
+const ConnectionOptions = require('./config/connection-options');
 
 /*commands*/
 const Authentication = require('./cmd/handshake/authentication');
@@ -31,6 +35,8 @@ const CommandParameter = require('./command-parameter');
 const LruPrepareCache = require('./lru-prepare-cache');
 const fsPromises = require('fs').promises;
 const Parse = require('./misc/parse');
+const Collations = require('./const/collations');
+const ConnOptions = require('./config/connection-options');
 
 const convertFixedTime = function (tz, conn) {
   if (tz === 'UTC' || tz === 'Etc/UTC' || tz === 'Z' || tz === 'Etc/GMT') {
@@ -59,6 +65,7 @@ const convertFixedTime = function (tz, conn) {
   }
   return tz;
 };
+const redirectUrlFormat = /(mariadb|mysql):\/\/(([^/@:]+)?(:([^/]+))?@)?(([^/:]+)(:([0-9]+))?)(\/([^?]+)(\?(.*))?)?$/;
 
 /**
  * New Connection instance.
@@ -89,7 +96,7 @@ class Connection extends EventEmitter {
     super();
 
     this.opts = Object.assign(new EventEmitter(), options);
-    this.info = new ConnectionInformation(this.opts);
+    this.info = new ConnectionInformation(this.opts, this.redirect.bind(this));
     this.prepareCache =
       this.opts.prepareCacheLength > 0 ? new LruPrepareCache(this.info, this.opts.prepareCacheLength) : null;
     this.addCommand = this.addCommandQueue;
@@ -173,7 +180,7 @@ class Connection extends EventEmitter {
         Errors.ER_BATCH_WITH_NO_VALUES,
         this.info,
         'HY000',
-        cmdParam.sql,
+        cmdParam.sql.length > this.opts.debugLen ? cmdParam.sql.substring(0, this.opts.debugLen) + '...' : cmdParam.sql,
         false,
         cmdParam.stack
       );
@@ -362,6 +369,7 @@ class Connection extends EventEmitter {
           let prom = Promise.resolve();
           // re-execute init query / session query timeout
           prom
+            .then(conn.handleCharset.bind(conn))
             .then(conn.handleTimezone.bind(conn))
             .then(conn.executeInitQuery.bind(conn))
             .then(conn.executeSessionTimeout.bind(conn))
@@ -430,7 +438,12 @@ class Connection extends EventEmitter {
         //only possibility is to kill process by another thread
         //TODO reuse a pool connection to avoid connection creation
         const self = this;
-        const killCon = new Connection(this.opts);
+
+        // relying on IP in place of DNS to ensure using same server
+        const remoteAddress = this.socket.remoteAddress;
+        const connOption = remoteAddress ? Object.assign({}, this.opts, { host: remoteAddress }) : this.opts;
+
+        const killCon = new Connection(connOption);
         killCon
           .connect()
           .then(() => {
@@ -568,11 +581,17 @@ class Connection extends EventEmitter {
     if (_options && _options.fullResult) return false;
     // not using info.isMariaDB() directly in case of callback use,
     // without connection being completely finished.
+    const bulkEnable =
+      _options === undefined || _options === null
+        ? this.opts.bulk
+        : _options.bulk !== undefined && _options.bulk !== null
+          ? _options.bulk
+          : this.opts.bulk;
     if (
       this.info.serverVersion &&
       this.info.serverVersion.mariaDb &&
       this.info.hasMinVersion(10, 2, 7) &&
-      this.opts.bulk &&
+      bulkEnable &&
       (this.info.serverCapabilities & Capabilities.MARIADB_CLIENT_STMT_BULK_OPERATIONS) > 0n
     ) {
       //ensure that there is no stream object
@@ -651,6 +670,40 @@ class Connection extends EventEmitter {
       }
     }
     return Promise.resolve();
+  }
+
+  /**
+   * set charset to charset/collation if set or utf8mb4 if not.
+   * @returns {Promise<void>}
+   * @private
+   */
+  handleCharset() {
+    if (this.opts.collation) {
+      // if index <= 255, skip command, since collation has already been set during handshake response.
+      if (this.opts.collation.index <= 255) return Promise.resolve();
+      const charset =
+        this.opts.collation.charset === 'utf8' && this.opts.collation.maxLength === 4
+          ? 'utf8mb4'
+          : this.opts.collation.charset;
+      return new Promise(
+        this.query.bind(this, new CommandParameter(`SET NAMES ${charset} COLLATE ${this.opts.collation.name}`))
+      );
+    }
+
+    // MXS-4635: server can some information directly on first Ok_Packet, like not truncated collation
+    // in this case, avoid useless SET NAMES utf8mb4 command
+    if (
+      !this.opts.charset &&
+      this.info.collation &&
+      this.info.collation.charset === 'utf8' &&
+      this.info.collation.maxLength === 4
+    ) {
+      this.info.collation = Collations.fromCharset('utf8mb4');
+      return Promise.resolve();
+    }
+    const connCharset = this.opts.charset ? this.opts.charset : 'utf8mb4';
+    this.info.collation = Collations.fromCharset(connCharset);
+    return new Promise(this.query.bind(this, new CommandParameter(`SET NAMES ${connCharset}`)));
   }
 
   /**
@@ -861,6 +914,7 @@ class Connection extends EventEmitter {
     const conn = this;
     this.status = Status.INIT_CMD;
     this.executeSessionVariableQuery()
+      .then(conn.handleCharset.bind(conn))
       .then(this.handleTimezone.bind(this))
       .then(this.checkServerVersion.bind(this))
       .then(this.executeInitQuery.bind(this))
@@ -888,6 +942,7 @@ class Connection extends EventEmitter {
         } else {
           conn.authFailHandler.call(conn, err);
         }
+        return Promise.reject(err);
       });
   }
 
@@ -912,18 +967,25 @@ class Connection extends EventEmitter {
   /**
    * Create TLS socket and associate events.
    *
+   * @param info current connection information
    * @param callback  callback function when done
    * @private
    */
-  createSecureContext(callback) {
-    const sslOption = Object.assign({}, this.opts.ssl, {
+  createSecureContext(info, callback) {
+    info.requireValidCert =
+      this.opts.ssl === true ||
+      this.opts.ssl.rejectUnauthorized === undefined ||
+      this.opts.ssl.rejectUnauthorized === true;
+
+    const baseConf = {
       servername: this.opts.host,
-      socket: this.socket
-    });
+      socket: this.socket,
+      rejectUnauthorized: false
+    };
+    const sslOption = this.opts.ssl === true ? baseConf : Object.assign({}, this.opts.ssl, baseConf);
 
     try {
       const secureSocket = tls.connect(sslOption, callback);
-
       secureSocket.on('data', this.streamIn.onData.bind(this.streamIn));
       secureSocket.on('error', this.socketErrorHandler.bind(this));
       secureSocket.on('end', this.socketErrorHandler.bind(this));
@@ -1245,14 +1307,38 @@ class Connection extends EventEmitter {
     if (this.status < Status.CLOSING) {
       this.addCommand = this.addCommandEnable;
     }
+    let conn = this;
+    if (cmdParam.opts && cmdParam.opts.collation && typeof cmdParam.opts.collation === 'string') {
+      const val = cmdParam.opts.collation.toUpperCase();
+      cmdParam.opts.collation = Collations.fromName(cmdParam.opts.collation.toUpperCase());
+      if (cmdParam.opts.collation === undefined) return reject(new RangeError(`Unknown collation '${val}'`));
+    }
+
     this.addCommand(
       new ChangeUser(
         cmdParam,
         this.opts,
         (res) => {
-          if (this.status < Status.CLOSING && this.opts.pipelining) this.addCommand = this.addCommandEnablePipeline;
-          if (cmdParam.opts && cmdParam.opts.collation) this.opts.collation = cmdParam.opts.collation;
-          resolve(res);
+          if (conn.status < Status.CLOSING && conn.opts.pipelining) conn.addCommand = conn.addCommandEnablePipeline;
+          if (cmdParam.opts && cmdParam.opts.collation) conn.opts.collation = cmdParam.opts.collation;
+          conn
+            .handleCharset()
+            .then(() => {
+              if (cmdParam.opts && cmdParam.opts.collation) {
+                conn.info.collation = cmdParam.opts.collation;
+                conn.opts.emit('collation', cmdParam.opts.collation);
+              }
+              resolve(res);
+            })
+            .catch((err) => {
+              const res = () => conn.authFailHandler.call(conn, err);
+              if (!err.fatal) {
+                conn.end(res, res);
+              } else {
+                res();
+              }
+              reject(err);
+            });
         },
         this.authFailHandler.bind(this, reject),
         this.getSocket.bind(this)
@@ -1309,6 +1395,97 @@ class Connection extends EventEmitter {
     this.addCommand(cmd);
   }
 
+  prepareExecute(cmdParam) {
+    if (!cmdParam.sql) {
+      return Promise.reject(
+        Errors.createError('sql parameter is mandatory', Errors.ER_UNDEFINED_SQL, this.info, 'HY000')
+      );
+    }
+
+    if (this.prepareCache && (this.sendQueue.isEmpty() || !this.receiveQueue.peekFront())) {
+      // no command in queue, current database is known, so cache can be search right now
+      const cachedPrepare = this.prepareCache.get(cmdParam.sql);
+      if (cachedPrepare) {
+        return new Promise(this.executePromise.bind(this, cmdParam, cachedPrepare)).finally(() =>
+          cachedPrepare.close()
+        );
+      }
+    }
+
+    // permit pipelining PREPARE and EXECUTE if mariadb 10.2.4+ and has no streaming
+    const conn = this;
+    if (this.opts.pipelining && this.info.isMariaDB() && this.info.hasMinVersion(10, 2, 4)) {
+      let hasStreamingValue = false;
+      const vals = cmdParam.values ? (Array.isArray(cmdParam.values) ? cmdParam.values : [cmdParam.values]) : [];
+      for (let i = 0; i < vals.length; i++) {
+        const val = vals[i];
+        if (
+          val != null &&
+          typeof val === 'object' &&
+          typeof val.pipe === 'function' &&
+          typeof val.read === 'function'
+        ) {
+          hasStreamingValue = true;
+        }
+      }
+      if (!hasStreamingValue) {
+        return new Promise((resolve, reject) => {
+          let nbExecute = 0;
+          const executeCommand = new Execute(
+            (res) => {
+              if (nbExecute++ === 0) {
+                executeCommand.prepare.close();
+                resolve(res);
+              }
+            },
+            (err) => {
+              if (nbExecute++ === 0) {
+                if (conn.opts.logger.error) conn.opts.logger.error(err);
+                reject(err);
+                if (executeCommand.prepare) {
+                  executeCommand.prepare.close();
+                }
+              }
+            },
+            conn.opts,
+            cmdParam,
+            null
+          );
+          cmdParam.executeCommand = executeCommand;
+          const cmd = new Prepare(
+            (prep) => {
+              if (nbExecute > 0) prep.close();
+            },
+            (err) => {
+              if (nbExecute++ === 0) {
+                if (conn.opts.logger.error) conn.opts.logger.error(err);
+                reject(err);
+              }
+            },
+            conn.opts,
+            cmdParam,
+            conn
+          );
+          conn.addCommand(cmd);
+          conn.addCommand(executeCommand);
+        });
+      }
+    }
+    // execute PREPARE, then EXECUTE
+    return new Promise((resolve, reject) => {
+      const cmd = new Prepare(resolve, reject, this.opts, cmdParam, conn);
+      conn.addCommand(cmd);
+    })
+      .then((prepare) => {
+        return new Promise(function (resolve, reject) {
+          conn.executePromise.call(conn, cmdParam, prepare, resolve, reject);
+        }).finally(() => prepare.close());
+      })
+      .catch((err) => {
+        if (conn.opts.logger.error) conn.opts.logger.error(err);
+        throw err;
+      });
+  }
   importFile(cmdParam, resolve, reject) {
     const conn = this;
     if (!cmdParam || !cmdParam.file) {
@@ -1374,9 +1551,7 @@ class Connection extends EventEmitter {
               conn.addCommand = conn.addCommandEnablePipeline.bind(conn);
             }
             const commands = conn.waitingAuthenticationQueue.toArray();
-            commands.forEach((cmd) => {
-              conn.addCommand(cmd);
-            });
+            commands.forEach((cmd) => conn.addCommand(cmd));
             conn.waitingAuthenticationQueue = null;
           }
         };
@@ -1394,7 +1569,7 @@ class Connection extends EventEmitter {
             while (!cmdError) {
               try {
                 const res = await fd.read(buf.buffer, buf.end, buf.buffer.length - buf.end, null);
-                if (res.bytesRead == 0) {
+                if (res.bytesRead === 0) {
                   // end of file reached.
                   fd.close().catch(() => {});
                   if (cmdError) {
@@ -1402,15 +1577,24 @@ class Connection extends EventEmitter {
                     reject(cmdError);
                     return;
                   }
-                  Promise.allSettled(queryPromises)
+                  await Promise.allSettled(queryPromises)
                     .then(() => {
-                      if (!cmdParam.skipDbCheck && cmdParam.database && cmdParam.database != prevDatabase) {
+                      // reset connection to initial database if was set
+                      if (
+                        !cmdParam.skipDbCheck &&
+                        prevDatabase &&
+                        cmdParam.database &&
+                        cmdParam.database !== prevDatabase
+                      ) {
                         return new Promise(tmpQuery.bind(conn, `USE \`${prevDatabase.replace(/`/gi, '``')}\``));
                       }
                       return Promise.resolve();
                     })
                     .then(() => {
                       endingFunction();
+                      if (cmdError) {
+                        reject(cmdError);
+                      }
                       resolve();
                     })
                     .catch((err) => {
@@ -1428,7 +1612,7 @@ class Connection extends EventEmitter {
                   });
 
                   queryPromises.push(...queryIntermediatePromise);
-                  if (buf.offset == buf.end) {
+                  if (buf.offset === buf.end) {
                     buf.offset = 0;
                     buf.end = 0;
                   } else {
@@ -1504,6 +1688,84 @@ class Connection extends EventEmitter {
     this.opts.removeAllListeners();
     this.streamOut = undefined;
     this.socket = undefined;
+  }
+
+  /**
+   * Redirecting connection to server indicated value.
+   * @param value server host string
+   * @param resolve promise result when done
+   */
+  redirect(value, resolve) {
+    if (this.opts.permitRedirect && value) {
+      // redirect only if :
+      // * when pipelining, having received all waiting responses.
+      // * not in a transaction
+      if (this.receiveQueue.length <= 1 && (this.info.status & ServerStatus.STATUS_IN_TRANS) === 0) {
+        this.info.redirectRequest = null;
+        const matchResults = value.match(redirectUrlFormat);
+        if (!matchResults) {
+          if (this.opts.logger.error)
+            this.opts.logger.error(
+              new Error(
+                `error parsing redirection string '${value}'. format must be 'mariadb/mysql://[<user>[:<password>]@]<host>[:<port>]/[<db>[?<opt1>=<value1>[&<opt2>=<value2>]]]'`
+              )
+            );
+          return resolve();
+        }
+
+        const options = {
+          host: matchResults[7] ? decodeURIComponent(matchResults[7]) : matchResults[6],
+          port: matchResults[9] ? parseInt(matchResults[9]) : 3306
+        };
+
+        if (options.host === this.opts.host && options.port === this.opts.port) {
+          // redirection to the same host, skip loop redirection
+          return resolve();
+        }
+
+        // actually only options accepted are user and password
+        // there might be additional possible options in the future
+        if (matchResults[3]) options.user = matchResults[3];
+        if (matchResults[5]) options.password = matchResults[5];
+
+        const redirectOpts = ConnectionOptions.parseOptionDataType(options);
+
+        const finalRedirectOptions = new ConnOptions(Object.assign({}, this.opts, redirectOpts));
+        const conn = new Connection(finalRedirectOptions);
+        conn
+          .connect()
+          .then(
+            async function () {
+              const cmdParam = new CommandParameter();
+              await new Promise(this.end.bind(this, cmdParam));
+              this.status = Status.CONNECTED;
+              this.info = conn.info;
+              this.opts = conn.opts;
+              this.socket = conn.socket;
+              if (this.prepareCache) this.prepareCache.reset();
+              this.streamOut = conn.streamOut;
+              this.streamIn = conn.streamIn;
+              resolve();
+            }.bind(this)
+          )
+          .catch(
+            function (e) {
+              if (this.opts.logger.error) {
+                const err = new Error(`fail to redirect to '${value}'`);
+                err.cause = e;
+                this.opts.logger.error(err);
+              }
+              resolve();
+            }.bind(this)
+          );
+      } else {
+        this.info.redirectRequest = value;
+        resolve();
+      }
+    } else {
+      this.info.redirectRequest = null;
+      resolve();
+    }
   }
 
   get threadId() {
